@@ -561,6 +561,16 @@ class MutantComponent extends EntityComponent {
 	}
 }
 
+class StalkerComponent extends EntityComponent {
+	constructor(instance: Model) {
+		super(instance);
+	}
+
+	public id(): string {
+		return "Stalker";
+	}
+}
+
 /************************************************************
  * CONTROLLERS
  * Description: Singletons that are used once
@@ -655,9 +665,13 @@ namespace AgentController {
 
 namespace EntityController {
 	export function __init() {
-		const model = ReplicatedStorage.WaitForChild("Mutant") as Model | undefined;
-		if (!model) throw "Mutant model is missing!";
-		new MutantComponent(model);
+		const mutant = ReplicatedStorage.WaitForChild("Mutant") as Model | undefined;
+		const stalker = ReplicatedStorage.WaitForChild("Stalker") as Model | undefined;
+		if (mutant) new MutantComponent(mutant);
+		if (stalker) new StalkerComponent(stalker);
+		if (!mutant && !stalker) throw "No entities found!";
+		if (!mutant) throw "No Mutant found!";
+		if (!stalker) throw "No Stalker found!";
 	}
 }
 
