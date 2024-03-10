@@ -456,7 +456,7 @@ class EntityComponent extends BaseComponent<Model> {
 		return "Entity";
 	}
 
-	private isActive = false;
+	protected isActive = false;
 
 	constructor(instance: Model) {
 		super(instance);
@@ -476,19 +476,22 @@ class EntityComponent extends BaseComponent<Model> {
 		if (!chasingValue) throw "Entity is missing Chasing BoolValue!";
 
 		this.createVisual();
+		this.onSeekingState(seekingValue.Value);
+		this.onChasingState(chasingValue.Value);
 
 		// Bindings
 		bin.batch(
-			root.GetPropertyChangedSignal("Position").Connect(() => {
-				const active = root.Position.Y > -60;
-				if (active === this.isActive) return;
-				this.isActive = root.Position.Y > -60;
-				DisplayController.setActive(this.isActive);
-			}),
-			seekingValue.Changed.Connect((value) => DisplayController.setSeeking(value)),
-			chasingValue.Changed.Connect((value) => DisplayController.setChasing(value)),
+			instance.AncestryChanged.Connect(() => this.onActive(instance.Parent === Workspace)),
+			seekingValue.Changed.Connect((value) => this.onSeekingState(value)),
+			chasingValue.Changed.Connect((value) => this.onChasingState(value)),
 		);
 	}
+
+	protected onActive(state: boolean) {
+		this.isActive = state;
+	}
+	protected onSeekingState(state: boolean) {}
+	protected onChasingState(state: boolean) {}
 
 	protected createVisual() {
 		const { root, bin } = this;
@@ -554,6 +557,19 @@ class EntityComponent extends BaseComponent<Model> {
 class MutantComponent extends EntityComponent {
 	constructor(instance: Model) {
 		super(instance);
+	}
+
+	protected onActive(state: boolean): void {
+		super.onActive(state);
+		DisplayController.setActive(state);
+	}
+
+	protected onSeekingState(state: boolean): void {
+		DisplayController.setSeeking(state);
+	}
+
+	protected onChasingState(state: boolean): void {
+		DisplayController.setChasing(state);
 	}
 
 	public id(): string {
@@ -654,15 +670,38 @@ namespace AgentController {
 }
 
 namespace EntityController {
+	const onChild = <T extends keyof Instances>(
+		parents: Instance[],
+		name: string,
+		className: T,
+		callback: (instance: Instances[T]) => void,
+	) => {
+		const bin = new Bin();
+		for (const parent of parents) {
+			const onChild = (child: Instance) => {
+				if (child.Name === name && child.IsA(className)) {
+					bin.destroy();
+					callback(child);
+					return true;
+				}
+				return false;
+			};
+			bin.add(parent.ChildAdded.Connect(onChild));
+			for (const child of parent.GetChildren()) if (onChild(child)) break;
+		}
+	};
+
 	export function __init() {
-		const model = ReplicatedStorage.WaitForChild("Mutant") as Model | undefined;
-		if (!model) throw "Mutant model is missing!";
-		new MutantComponent(model);
+		onChild([Workspace, ReplicatedStorage], "Mutant", "Model", (mutant) => {
+			print("Mutant found");
+			new MutantComponent(mutant);
+		});
 	}
 }
 
 namespace LootableController {
-	const ItemSpawns = Workspace.WaitForChild("ItemSpots");
+	const ItemSpawns = Workspace.WaitForChild("ItemSpots", 5) as Folder;
+	if (!ItemSpawns) throw "ItemSpots folder not found!";
 
 	const onPossibleLoot = (instance: Instance) => {
 		const id = instance.Name;
@@ -681,7 +720,8 @@ namespace LootableController {
 }
 
 namespace SwitchController {
-	const LightFolder = Workspace.WaitForChild("Lights");
+	const LightFolder = Workspace.WaitForChild("Lights", 5) as Folder;
+	if (!LightFolder) throw "Lights folder not found!";
 
 	const onLight = (light: Instance) => {
 		new SwitchComponent(light as Model);

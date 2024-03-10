@@ -456,7 +456,7 @@ class EntityComponent extends BaseComponent<Model> {
 		return "Entity";
 	}
 
-	private isActive = false;
+	protected isActive = false;
 
 	constructor(instance: Model) {
 		super(instance);
@@ -476,19 +476,22 @@ class EntityComponent extends BaseComponent<Model> {
 		if (!chasingValue) throw "Entity is missing Chasing BoolValue!";
 
 		this.createVisual();
+		this.onSeekingState(seekingValue.Value);
+		this.onChasingState(chasingValue.Value);
 
 		// Bindings
 		bin.batch(
-			root.GetPropertyChangedSignal("Position").Connect(() => {
-				const active = root.Position.Y > -60;
-				if (active === this.isActive) return;
-				this.isActive = root.Position.Y > -60;
-				DisplayController.setActive(this.isActive);
-			}),
-			seekingValue.Changed.Connect((value) => DisplayController.setSeeking(value)),
-			chasingValue.Changed.Connect((value) => DisplayController.setChasing(value)),
+			instance.AncestryChanged.Connect(() => this.onActive(instance.Parent === Workspace)),
+			seekingValue.Changed.Connect((value) => this.onSeekingState(value)),
+			chasingValue.Changed.Connect((value) => this.onChasingState(value)),
 		);
 	}
+
+	protected onActive(state: boolean) {
+		this.isActive = state;
+	}
+	protected onSeekingState(state: boolean) {}
+	protected onChasingState(state: boolean) {}
 
 	protected createVisual() {
 		const { root, bin } = this;
@@ -556,6 +559,21 @@ class MutantComponent extends EntityComponent {
 		super(instance);
 	}
 
+	protected onActive(state: boolean): void {
+		super.onActive(state);
+		DisplayController.Mutant.setActive(state);
+	}
+
+	protected onSeekingState(state: boolean): void {
+		super.onSeekingState(state);
+		DisplayController.Mutant.setSeeking(state);
+	}
+
+	protected onChasingState(state: boolean): void {
+		super.onChasingState(state);
+		DisplayController.Mutant.setChasing(state);
+	}
+
 	public id(): string {
 		return "Mutant";
 	}
@@ -564,6 +582,21 @@ class MutantComponent extends EntityComponent {
 class StalkerComponent extends EntityComponent {
 	constructor(instance: Model) {
 		super(instance);
+	}
+
+	protected onActive(state: boolean): void {
+		super.onActive(state);
+		DisplayController.Stalker.setActive(state);
+	}
+
+	protected onSeekingState(state: boolean): void {
+		super.onSeekingState(state);
+		DisplayController.Stalker.setSeeking(state);
+	}
+
+	protected onChasingState(state: boolean): void {
+		super.onChasingState(state);
+		DisplayController.Stalker.setChasing(state);
 	}
 
 	public id(): string {
@@ -581,26 +614,48 @@ namespace DisplayController {
 	const FuseState = ReplicatedStorage.WaitForChild("GameState").WaitForChild("FusesFried") as BoolValue;
 
 	const window = Library.window();
-	const mutant = window.section("Mutant");
-	const active = mutant.state("Active:");
-	const seeking = mutant.state("Seeking:");
-	const chasing = mutant.state("Chasing:");
+
+	export namespace Mutant {
+		const mutant = window.section("Mutant");
+		const active = mutant.state("Active:");
+		const seeking = mutant.state("Seeking:");
+		const chasing = mutant.state("Chasing:");
+
+		export function setActive(value: boolean) {
+			active.setColor(value ? new Color3(1, 0, 0) : new Color3(1, 1, 1)).setValue(value ? "YES" : "NO");
+		}
+
+		export function setSeeking(value: boolean) {
+			seeking.setColor(value ? new Color3(1, 0, 0) : new Color3(1, 1, 1)).setValue(value ? "YES" : "NO");
+		}
+
+		export function setChasing(value: boolean) {
+			chasing.setColor(value ? new Color3(1, 0, 0) : new Color3(1, 1, 1)).setValue(value ? "YES" : "NO");
+		}
+	}
+
+	export namespace Stalker {
+		const stalker = window.section("Stalker");
+		const active = stalker.state("Active:");
+		const seeking = stalker.state("Seeking:");
+		const chasing = stalker.state("Chasing:");
+
+		export function setActive(value: boolean) {
+			active.setColor(value ? new Color3(1, 0, 0) : new Color3(1, 1, 1)).setValue(value ? "YES" : "NO");
+		}
+
+		export function setSeeking(value: boolean) {
+			seeking.setColor(value ? new Color3(1, 0, 0) : new Color3(1, 1, 1)).setValue(value ? "YES" : "NO");
+		}
+
+		export function setChasing(value: boolean) {
+			chasing.setColor(value ? new Color3(1, 0, 0) : new Color3(1, 1, 1)).setValue(value ? "YES" : "NO");
+		}
+	}
 
 	const residence = window.section("Residence");
 	const power = residence.state("Power:");
 	const generator = residence.state("Generator:");
-
-	export function setActive(value: boolean) {
-		active.setColor(value ? new Color3(1, 0, 0) : new Color3(1, 1, 1)).setValue(value ? "YES" : "NO");
-	}
-
-	export function setSeeking(value: boolean) {
-		seeking.setColor(value ? new Color3(1, 0, 0) : new Color3(1, 1, 1)).setValue(value ? "YES" : "NO");
-	}
-
-	export function setChasing(value: boolean) {
-		chasing.setColor(value ? new Color3(1, 0, 0) : new Color3(1, 1, 1)).setValue(value ? "YES" : "NO");
-	}
 
 	export function setPower(value: boolean) {
 		power.setColor(value ? new Color3(1, 1, 1) : new Color3(1, 0, 0)).setValue(value ? "ON" : "OFF");
@@ -611,9 +666,13 @@ namespace DisplayController {
 	}
 
 	export function __init() {
-		setActive(false);
-		setSeeking(false);
-		setChasing(false);
+		Mutant.setActive(false);
+		Mutant.setSeeking(false);
+		Mutant.setChasing(false);
+
+		Stalker.setActive(false);
+		Stalker.setSeeking(false);
+		Stalker.setChasing(false);
 
 		setPower(!FuseState.Value);
 		setGenerator(FuelValue.Value);
@@ -664,14 +723,36 @@ namespace AgentController {
 }
 
 namespace EntityController {
+	const onChild = <T extends keyof Instances>(
+		parents: Instance[],
+		name: string,
+		className: T,
+		callback: (instance: Instances[T]) => void,
+	) => {
+		const bin = new Bin();
+		for (const parent of parents) {
+			const onChild = (child: Instance) => {
+				if (child.Name === name && child.IsA(className)) {
+					bin.destroy();
+					callback(child);
+					return true;
+				}
+				return false;
+			};
+			bin.add(parent.ChildAdded.Connect(onChild));
+			for (const child of parent.GetChildren()) if (onChild(child)) break;
+		}
+	};
+
 	export function __init() {
-		const mutant = ReplicatedStorage.WaitForChild("Mutant") as Model | undefined;
-		const stalker = ReplicatedStorage.WaitForChild("Stalker") as Model | undefined;
-		if (mutant) new MutantComponent(mutant);
-		if (stalker) new StalkerComponent(stalker);
-		if (!mutant && !stalker) throw "No entities found!";
-		if (!mutant) throw "No Mutant found!";
-		if (!stalker) throw "No Stalker found!";
+		onChild([Workspace, ReplicatedStorage], "Mutant", "Model", (mutant) => {
+			print("Mutant found");
+			new MutantComponent(mutant);
+		});
+		onChild([Workspace, ReplicatedStorage], "Stalker", "Model", (stalker) => {
+			print("Stalker found");
+			new StalkerComponent(stalker);
+		});
 	}
 }
 
@@ -718,4 +799,5 @@ EntityController.__init();
 LootableController.__init();
 SwitchController.__init();
 
+print("Initialized Successfully");
 export = "Initialized Successfully";
