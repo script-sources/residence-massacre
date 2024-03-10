@@ -451,6 +451,7 @@ class SwitchComponent extends BaseComponent<Model> {
 
 class EntityComponent extends BaseComponent<Model> {
 	public readonly root: BasePart;
+	public readonly configs: Folder;
 
 	public id() {
 		return "Entity";
@@ -464,34 +465,22 @@ class EntityComponent extends BaseComponent<Model> {
 		const { bin } = this;
 		const root = instance.WaitForChild("HumanoidRootPart", 5) as BasePart | undefined;
 		if (!root) throw "Entity is missing a HumanoidRootPart!";
-
-		this.root = root;
-
-		// Initialize
 		const configs = instance.WaitForChild("Config", 5) as Folder;
 		if (!configs) throw "Entity is missing Config folder!";
-		const seekingValue = configs.WaitForChild("Active") as BoolValue;
-		if (!seekingValue) throw "Entity is missing Active BoolValue!";
-		const chasingValue = configs.WaitForChild("Chasing") as BoolValue;
-		if (!chasingValue) throw "Entity is missing Chasing BoolValue!";
 
+		this.root = root;
+		this.configs = configs;
+
+		// Initialize
 		this.createVisual();
-		this.onSeekingState(seekingValue.Value);
-		this.onChasingState(chasingValue.Value);
 
 		// Bindings
-		bin.batch(
-			instance.AncestryChanged.Connect(() => this.onActive(instance.Parent === Workspace)),
-			seekingValue.Changed.Connect((value) => this.onSeekingState(value)),
-			chasingValue.Changed.Connect((value) => this.onChasingState(value)),
-		);
+		bin.batch(instance.AncestryChanged.Connect(() => this.onActive(instance.Parent === Workspace)));
 	}
 
 	protected onActive(state: boolean) {
 		this.isActive = state;
 	}
-	protected onSeekingState(state: boolean) {}
-	protected onChasingState(state: boolean) {}
 
 	protected createVisual() {
 		const { root, bin } = this;
@@ -557,19 +546,31 @@ class EntityComponent extends BaseComponent<Model> {
 class MutantComponent extends EntityComponent {
 	constructor(instance: Model) {
 		super(instance);
+
+		const { bin, configs } = this;
+		const seekingValue = configs.WaitForChild("Active") as BoolValue;
+		if (!seekingValue) throw "Entity is missing Active BoolValue!";
+		const chasingValue = configs.WaitForChild("Chasing") as BoolValue;
+		if (!chasingValue) throw "Entity is missing Chasing BoolValue!";
+
+		// Bindings
+		bin.batch(
+			seekingValue.Changed.Connect(() => this.onSeekingState(seekingValue.Value)),
+			chasingValue.Changed.Connect(() => this.onChasingState(chasingValue.Value)),
+		);
 	}
 
 	protected onActive(state: boolean): void {
 		super.onActive(state);
-		DisplayController.setActive(state);
+		DisplayController.Mutant.setActive(state);
 	}
 
 	protected onSeekingState(state: boolean): void {
-		DisplayController.setSeeking(state);
+		DisplayController.Mutant.setSeeking(state);
 	}
 
 	protected onChasingState(state: boolean): void {
-		DisplayController.setChasing(state);
+		DisplayController.Mutant.setChasing(state);
 	}
 
 	public id(): string {
@@ -585,47 +586,56 @@ class MutantComponent extends EntityComponent {
 namespace DisplayController {
 	const FuelValue = Workspace.WaitForChild("Shack").WaitForChild("Generator").WaitForChild("Fuel") as NumberValue;
 	const FuseState = ReplicatedStorage.WaitForChild("GameState").WaitForChild("FusesFried") as BoolValue;
+	if (!FuelValue) throw "Fuel Value not found!";
+	if (!FuseState) throw "Fuse State not found!";
 
 	const window = Library.window();
-	const mutant = window.section("Mutant");
-	const active = mutant.state("Active:");
-	const seeking = mutant.state("Seeking:");
-	const chasing = mutant.state("Chasing:");
 
-	const residence = window.section("Residence");
-	const power = residence.state("Power:");
-	const generator = residence.state("Generator:");
+	export namespace Mutant {
+		const mutant = window.section("Mutant");
+		const active = mutant.state("Active:");
+		const seeking = mutant.state("Seeking:");
+		const chasing = mutant.state("Chasing:");
 
-	export function setActive(value: boolean) {
-		active.setColor(value ? new Color3(1, 0, 0) : new Color3(1, 1, 1)).setValue(value ? "YES" : "NO");
+		export function setActive(value: boolean) {
+			active.setColor(value ? new Color3(1, 0, 0) : new Color3(1, 1, 1)).setValue(value ? "YES" : "NO");
+		}
+
+		export function setSeeking(value: boolean) {
+			seeking.setColor(value ? new Color3(1, 0, 0) : new Color3(1, 1, 1)).setValue(value ? "YES" : "NO");
+		}
+
+		export function setChasing(value: boolean) {
+			chasing.setColor(value ? new Color3(1, 0, 0) : new Color3(1, 1, 1)).setValue(value ? "YES" : "NO");
+		}
 	}
 
-	export function setSeeking(value: boolean) {
-		seeking.setColor(value ? new Color3(1, 0, 0) : new Color3(1, 1, 1)).setValue(value ? "YES" : "NO");
-	}
+	export namespace Residence {
+		const residence = window.section("Residence");
+		const power = residence.state("Power:");
+		const generator = residence.state("Generator:");
 
-	export function setChasing(value: boolean) {
-		chasing.setColor(value ? new Color3(1, 0, 0) : new Color3(1, 1, 1)).setValue(value ? "YES" : "NO");
-	}
+		export function setPower(value: boolean) {
+			power.setColor(value ? new Color3(1, 1, 1) : new Color3(1, 0, 0)).setValue(value ? "ON" : "OFF");
+		}
 
-	export function setPower(value: boolean) {
-		power.setColor(value ? new Color3(1, 1, 1) : new Color3(1, 0, 0)).setValue(value ? "ON" : "OFF");
-	}
-
-	export function setGenerator(value: number) {
-		generator.setColor(new Color3(1, 0, 0).Lerp(new Color3(1, 1, 1), value / 100)).setValue("%.0f".format(value));
+		export function setGenerator(value: number) {
+			generator
+				.setColor(new Color3(1, 0, 0).Lerp(new Color3(1, 1, 1), value / 100))
+				.setValue("%.0f".format(value));
+		}
 	}
 
 	export function __init() {
-		setActive(false);
-		setSeeking(false);
-		setChasing(false);
+		Mutant.setActive(false);
+		Mutant.setSeeking(false);
+		Mutant.setChasing(false);
 
-		setPower(!FuseState.Value);
-		setGenerator(FuelValue.Value);
+		Residence.setPower(!FuseState.Value);
+		Residence.setGenerator(FuelValue.Value);
 
-		FuseState.Changed.Connect(() => setPower(!FuseState.Value));
-		FuelValue.Changed.Connect(() => setGenerator(FuelValue.Value));
+		FuseState.Changed.Connect(() => Residence.setPower(!FuseState.Value));
+		FuelValue.Changed.Connect(() => Residence.setGenerator(FuelValue.Value));
 	}
 }
 

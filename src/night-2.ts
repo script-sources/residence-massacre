@@ -451,6 +451,7 @@ class SwitchComponent extends BaseComponent<Model> {
 
 class EntityComponent extends BaseComponent<Model> {
 	public readonly root: BasePart;
+	public readonly configs: Folder;
 
 	public id() {
 		return "Entity";
@@ -464,34 +465,22 @@ class EntityComponent extends BaseComponent<Model> {
 		const { bin } = this;
 		const root = instance.WaitForChild("HumanoidRootPart", 5) as BasePart | undefined;
 		if (!root) throw "Entity is missing a HumanoidRootPart!";
-
-		this.root = root;
-
-		// Initialize
 		const configs = instance.WaitForChild("Config", 5) as Folder;
 		if (!configs) throw "Entity is missing Config folder!";
-		const seekingValue = configs.WaitForChild("Active") as BoolValue;
-		if (!seekingValue) throw "Entity is missing Active BoolValue!";
-		const chasingValue = configs.WaitForChild("Chasing") as BoolValue;
-		if (!chasingValue) throw "Entity is missing Chasing BoolValue!";
 
+		this.root = root;
+		this.configs = configs;
+
+		// Initialize
 		this.createVisual();
-		this.onSeekingState(seekingValue.Value);
-		this.onChasingState(chasingValue.Value);
 
 		// Bindings
-		bin.batch(
-			instance.AncestryChanged.Connect(() => this.onActive(instance.Parent === Workspace)),
-			seekingValue.Changed.Connect((value) => this.onSeekingState(value)),
-			chasingValue.Changed.Connect((value) => this.onChasingState(value)),
-		);
+		bin.batch(instance.AncestryChanged.Connect(() => this.onActive(instance.Parent === Workspace)));
 	}
 
 	protected onActive(state: boolean) {
 		this.isActive = state;
 	}
-	protected onSeekingState(state: boolean) {}
-	protected onChasingState(state: boolean) {}
 
 	protected createVisual() {
 		const { root, bin } = this;
@@ -557,6 +546,18 @@ class EntityComponent extends BaseComponent<Model> {
 class MutantComponent extends EntityComponent {
 	constructor(instance: Model) {
 		super(instance);
+
+		const { bin, configs } = this;
+		const seekingValue = configs.WaitForChild("Active") as BoolValue;
+		if (!seekingValue) throw "Entity is missing Active BoolValue!";
+		const chasingValue = configs.WaitForChild("Chasing") as BoolValue;
+		if (!chasingValue) throw "Entity is missing Chasing BoolValue!";
+
+		// Bindings
+		bin.batch(
+			seekingValue.Changed.Connect(() => this.onSeekingState(seekingValue.Value)),
+			chasingValue.Changed.Connect(() => this.onChasingState(chasingValue.Value)),
+		);
 	}
 
 	protected onActive(state: boolean): void {
@@ -565,12 +566,10 @@ class MutantComponent extends EntityComponent {
 	}
 
 	protected onSeekingState(state: boolean): void {
-		super.onSeekingState(state);
 		DisplayController.Mutant.setSeeking(state);
 	}
 
 	protected onChasingState(state: boolean): void {
-		super.onChasingState(state);
 		DisplayController.Mutant.setChasing(state);
 	}
 
@@ -582,6 +581,18 @@ class MutantComponent extends EntityComponent {
 class StalkerComponent extends EntityComponent {
 	constructor(instance: Model) {
 		super(instance);
+
+		const { bin, configs } = this;
+		const seekingValue = configs.WaitForChild("Active") as BoolValue;
+		if (!seekingValue) throw "Entity is missing Active BoolValue!";
+		const stunnedValue = configs.WaitForChild("Stunned") as BoolValue;
+		if (!stunnedValue) throw "Entity is missing Stunned BoolValue!";
+
+		// Bindings
+		bin.batch(
+			seekingValue.Changed.Connect(() => this.onSeekingState(seekingValue.Value)),
+			stunnedValue.Changed.Connect(() => this.onStunnedState(stunnedValue.Value)),
+		);
 	}
 
 	protected onActive(state: boolean): void {
@@ -590,13 +601,11 @@ class StalkerComponent extends EntityComponent {
 	}
 
 	protected onSeekingState(state: boolean): void {
-		super.onSeekingState(state);
 		DisplayController.Stalker.setSeeking(state);
 	}
 
-	protected onChasingState(state: boolean): void {
-		super.onChasingState(state);
-		DisplayController.Stalker.setChasing(state);
+	protected onStunnedState(state: boolean): void {
+		DisplayController.Stalker.setStunned(state);
 	}
 
 	public id(): string {
@@ -612,6 +621,8 @@ class StalkerComponent extends EntityComponent {
 namespace DisplayController {
 	const FuelValue = Workspace.WaitForChild("Shack").WaitForChild("Generator").WaitForChild("Fuel") as NumberValue;
 	const FuseState = ReplicatedStorage.WaitForChild("GameState").WaitForChild("FusesFried") as BoolValue;
+	if (!FuelValue) throw "Fuel Value not found!";
+	if (!FuseState) throw "Fuse State not found!";
 
 	const window = Library.window();
 
@@ -638,7 +649,7 @@ namespace DisplayController {
 		const stalker = window.section("Stalker");
 		const active = stalker.state("Active:");
 		const seeking = stalker.state("Seeking:");
-		const chasing = stalker.state("Chasing:");
+		const stunned = stalker.state("Stunned:");
 
 		export function setActive(value: boolean) {
 			active.setColor(value ? new Color3(1, 0, 0) : new Color3(1, 1, 1)).setValue(value ? "YES" : "NO");
@@ -648,8 +659,8 @@ namespace DisplayController {
 			seeking.setColor(value ? new Color3(1, 0, 0) : new Color3(1, 1, 1)).setValue(value ? "YES" : "NO");
 		}
 
-		export function setChasing(value: boolean) {
-			chasing.setColor(value ? new Color3(1, 0, 0) : new Color3(1, 1, 1)).setValue(value ? "YES" : "NO");
+		export function setStunned(value: boolean) {
+			stunned.setColor(value ? new Color3(1, 0, 0) : new Color3(1, 1, 1)).setValue(value ? "YES" : "NO");
 		}
 	}
 
@@ -672,7 +683,7 @@ namespace DisplayController {
 
 		Stalker.setActive(false);
 		Stalker.setSeeking(false);
-		Stalker.setChasing(false);
+		Stalker.setStunned(false);
 
 		setPower(!FuseState.Value);
 		setGenerator(FuelValue.Value);
@@ -740,7 +751,9 @@ namespace EntityController {
 				return false;
 			};
 			bin.add(parent.ChildAdded.Connect(onChild));
-			for (const child of parent.GetChildren()) if (onChild(child)) break;
+			task.defer(() => {
+				for (const child of parent.GetChildren()) if (onChild(child)) break;
+			});
 		}
 	};
 
@@ -757,7 +770,8 @@ namespace EntityController {
 }
 
 namespace LootableController {
-	const ItemSpawns = Workspace.WaitForChild("ItemSpots");
+	const ItemSpawns = Workspace.WaitForChild("ItemSpots", 5) as Folder;
+	if (!ItemSpawns) throw "ItemSpots folder not found!";
 
 	const onPossibleLoot = (instance: Instance) => {
 		const id = instance.Name;
@@ -776,7 +790,8 @@ namespace LootableController {
 }
 
 namespace SwitchController {
-	const LightFolder = Workspace.WaitForChild("Lights");
+	const LightFolder = Workspace.WaitForChild("Lights", 5) as Folder;
+	if (!LightFolder) throw "Lights folder not found!";
 
 	const onLight = (light: Instance) => {
 		new SwitchComponent(light as Model);
