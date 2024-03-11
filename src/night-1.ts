@@ -359,7 +359,7 @@ class LootableComponent extends BaseComponent<Instance> {
 	constructor(instance: Instance) {
 		super(instance);
 		this.label = instance.Name;
-		this.root = instance.WaitForChild("Handle", 10) as Part;
+		this.root = instance.WaitForChild("Handle", 30) as Part;
 
 		// Initialize:
 		this.createVisual();
@@ -404,25 +404,26 @@ class LootableComponent extends BaseComponent<Instance> {
 	}
 }
 
-class SwitchComponent extends BaseComponent<Model> {
-	private readonly light: Model;
-	private readonly switch: Model;
-	private readonly statuses: Configuration;
-	private readonly detector: Part;
+class LightComponent extends BaseComponent<Model> {
+	constructor(instance: Model) {
+		super(instance);
 
-	constructor(item: Model) {
-		super(item);
-		this.light = item.WaitForChild("Lamp") as Model;
-		this.switch = item.WaitForChild("Switch") as Model;
-		this.statuses = item.WaitForChild("Status") as Configuration;
-		this.detector = this.switch.WaitForChild("Detector") as Part;
-
-		// init UI:
-		this.createVisual();
+		const { bin } = this;
+		for (const child of instance.GetChildren()) this.onChild(child);
+		bin.add(instance.ChildAdded.Connect((child) => this.onChild(child)));
 	}
 
-	private createVisual() {
-		const { detector: root, bin } = this;
+	protected onChild(child: Instance) {
+		const name = child.Name;
+		if (name === "Switch") {
+			const root = child.WaitForChild("Detector", 6) as BasePart;
+			if (!root) throw "Detector not found!";
+			this.createVisual(root);
+		}
+	}
+
+	protected createVisual(root: BasePart) {
+		const { bin } = this;
 
 		// Instances:
 		const BillboardGui = new Instance("BillboardGui");
@@ -729,12 +730,12 @@ namespace LootableController {
 	}
 }
 
-namespace SwitchController {
+namespace LightController {
 	const LightFolder = Workspace.WaitForChild("Lights", 5) as Folder;
 	if (!LightFolder) throw "Lights folder not found!";
 
 	const onLight = (light: Instance) => {
-		new SwitchComponent(light as Model);
+		new LightComponent(light as Model);
 	};
 
 	export function __init() {
@@ -752,6 +753,6 @@ DisplayController.__init();
 AgentController.__init();
 EntityController.__init();
 LootableController.__init();
-SwitchController.__init();
+LightController.__init();
 
 export = "Initialized Successfully";

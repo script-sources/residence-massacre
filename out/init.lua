@@ -3,7 +3,7 @@ local ROOT = "https://raw.githubusercontent.com/script-sources/residence-massacr
 local SOURCES = {
 	[14437001043] = "lobby.lua",
 	[14896802601] = "night-1.lua",
-	[2] = "night-2.lua",
+	[16667550979] = "night-2.lua",
 }
 local _binding = game
 local GameId = _binding.GameId

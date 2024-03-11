@@ -383,7 +383,7 @@ do
 	function LootableComponent:constructor(instance)
 		super.constructor(self, instance)
 		self.label = instance.Name
-		self.root = instance:WaitForChild("Handle", 10)
+		self.root = instance:WaitForChild("Handle", 30)
 		-- Initialize:
 		self:createVisual()
 	end
@@ -422,32 +422,43 @@ do
 		bin:add(BillboardGui)
 	end
 end
-local SwitchComponent
+local LightComponent
 do
 	local super = BaseComponent
-	SwitchComponent = setmetatable({}, {
+	LightComponent = setmetatable({}, {
 		__tostring = function()
-			return "SwitchComponent"
+			return "LightComponent"
 		end,
 		__index = super,
 	})
-	SwitchComponent.__index = SwitchComponent
-	function SwitchComponent.new(...)
-		local self = setmetatable({}, SwitchComponent)
+	LightComponent.__index = LightComponent
+	function LightComponent.new(...)
+		local self = setmetatable({}, LightComponent)
 		return self:constructor(...) or self
 	end
-	function SwitchComponent:constructor(item)
-		super.constructor(self, item)
-		self.light = item:WaitForChild("Lamp")
-		self.switch = item:WaitForChild("Switch")
-		self.statuses = item:WaitForChild("Status")
-		self.detector = self.switch:WaitForChild("Detector")
-		-- init UI:
-		self:createVisual()
-	end
-	function SwitchComponent:createVisual()
+	function LightComponent:constructor(instance)
+		super.constructor(self, instance)
 		local _binding = self
-		local root = _binding.detector
+		local bin = _binding.bin
+		for _, child in instance:GetChildren() do
+			self:onChild(child)
+		end
+		bin:add(instance.ChildAdded:Connect(function(child)
+			return self:onChild(child)
+		end))
+	end
+	function LightComponent:onChild(child)
+		local name = child.Name
+		if name == "Switch" then
+			local root = child:WaitForChild("Detector", 6)
+			if not root then
+				error("Detector not found!")
+			end
+			self:createVisual(root)
+		end
+	end
+	function LightComponent:createVisual(root)
+		local _binding = self
 		local bin = _binding.bin
 		-- Instances:
 		local BillboardGui = Instance.new("BillboardGui")
@@ -790,15 +801,15 @@ do
 	end
 	_container.__init = __init
 end
-local SwitchController = {}
+local LightController = {}
 do
-	local _container = SwitchController
+	local _container = LightController
 	local LightFolder = Workspace:WaitForChild("Lights", 5)
 	if not LightFolder then
 		error("Lights folder not found!")
 	end
 	local onLight = function(light)
-		SwitchComponent.new(light)
+		LightComponent.new(light)
 	end
 	local function __init()
 		for _, child in LightFolder:GetChildren() do
@@ -819,5 +830,5 @@ DisplayController.__init()
 AgentController.__init()
 EntityController.__init()
 LootableController.__init()
-SwitchController.__init()
+LightController.__init()
 return "Initialized Successfully"

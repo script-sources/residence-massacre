@@ -359,7 +359,7 @@ class LootableComponent extends BaseComponent<Instance> {
 	constructor(instance: Instance) {
 		super(instance);
 		this.label = instance.Name;
-		this.root = instance.WaitForChild("Handle", 10) as Part;
+		this.root = instance.WaitForChild("Handle", 30) as Part;
 
 		// Initialize:
 		this.createVisual();
@@ -404,25 +404,26 @@ class LootableComponent extends BaseComponent<Instance> {
 	}
 }
 
-class SwitchComponent extends BaseComponent<Model> {
-	private readonly light: Model;
-	private readonly switch: Model;
-	private readonly statuses: Configuration;
-	private readonly detector: Part;
+class LightComponent extends BaseComponent<Model> {
+	constructor(instance: Model) {
+		super(instance);
 
-	constructor(item: Model) {
-		super(item);
-		this.light = item.WaitForChild("Lamp") as Model;
-		this.switch = item.WaitForChild("Switch") as Model;
-		this.statuses = item.WaitForChild("Status") as Configuration;
-		this.detector = this.switch.WaitForChild("Detector") as Part;
-
-		// init UI:
-		this.createVisual();
+		const { bin } = this;
+		for (const child of instance.GetChildren()) this.onChild(child);
+		bin.add(instance.ChildAdded.Connect((child) => this.onChild(child)));
 	}
 
-	private createVisual() {
-		const { detector: root, bin } = this;
+	protected onChild(child: Instance) {
+		const name = child.Name;
+		if (name === "Switch") {
+			const root = child.WaitForChild("Detector", 6) as BasePart;
+			if (!root) throw "Detector not found!";
+			this.createVisual(root);
+		}
+	}
+
+	protected createVisual(root: BasePart) {
+		const { bin } = this;
 
 		// Instances:
 		const BillboardGui = new Instance("BillboardGui");
@@ -619,10 +620,10 @@ class StalkerComponent extends EntityComponent {
  * Last updated: Feb. 14, 2024
  ************************************************************/
 namespace DisplayController {
-	const FuelValue = Workspace.WaitForChild("Shack").WaitForChild("Generator").WaitForChild("Fuel") as NumberValue;
-	const FuseState = ReplicatedStorage.WaitForChild("GameState").WaitForChild("FusesFried") as BoolValue;
-	if (!FuelValue) throw "Fuel Value not found!";
-	if (!FuseState) throw "Fuse State not found!";
+	const GameState = ReplicatedStorage.WaitForChild("GameState", 5) as StringValue;
+	if (!GameState) throw "GameState not found!";
+	const MoneyValue = GameState.WaitForChild("Money", 5) as NumberValue;
+	if (!MoneyValue) throw "Money not found!";
 
 	const window = Library.window();
 
@@ -664,16 +665,13 @@ namespace DisplayController {
 		}
 	}
 
-	const residence = window.section("Residence");
-	const power = residence.state("Power:");
-	const generator = residence.state("Generator:");
+	export namespace Factory {
+		const factory = window.section("Factory");
+		const money = factory.state("Money:").setColor(new Color3(0, 1, 0));
 
-	export function setPower(value: boolean) {
-		power.setColor(value ? new Color3(1, 1, 1) : new Color3(1, 0, 0)).setValue(value ? "ON" : "OFF");
-	}
-
-	export function setGenerator(value: number) {
-		generator.setColor(new Color3(1, 0, 0).Lerp(new Color3(1, 1, 1), value / 100)).setValue("%.0f".format(value));
+		export function setMoney(value: number) {
+			money.setValue("$%.0f".format(value));
+		}
 	}
 
 	export function __init() {
@@ -685,11 +683,9 @@ namespace DisplayController {
 		Stalker.setSeeking(false);
 		Stalker.setStunned(false);
 
-		setPower(!FuseState.Value);
-		setGenerator(FuelValue.Value);
+		Factory.setMoney(MoneyValue.Value);
 
-		FuseState.Changed.Connect(() => setPower(!FuseState.Value));
-		FuelValue.Changed.Connect(() => setGenerator(FuelValue.Value));
+		MoneyValue.Changed.Connect((value) => Factory.setMoney(value));
 	}
 }
 
@@ -759,11 +755,9 @@ namespace EntityController {
 
 	export function __init() {
 		onChild([Workspace, ReplicatedStorage], "Mutant", "Model", (mutant) => {
-			print("Mutant found");
 			new MutantComponent(mutant);
 		});
 		onChild([Workspace, ReplicatedStorage], "Stalker", "Model", (stalker) => {
-			print("Stalker found");
 			new StalkerComponent(stalker);
 		});
 	}
@@ -789,12 +783,12 @@ namespace LootableController {
 	}
 }
 
-namespace SwitchController {
+namespace LightController {
 	const LightFolder = Workspace.WaitForChild("Lights", 5) as Folder;
 	if (!LightFolder) throw "Lights folder not found!";
 
 	const onLight = (light: Instance) => {
-		new SwitchComponent(light as Model);
+		new LightComponent(light as Model);
 	};
 
 	export function __init() {
@@ -812,7 +806,7 @@ DisplayController.__init();
 AgentController.__init();
 EntityController.__init();
 LootableController.__init();
-SwitchController.__init();
+LightController.__init();
 
 print("Initialized Successfully");
 export = "Initialized Successfully";

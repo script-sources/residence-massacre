@@ -6,7 +6,7 @@ const SOURCES = new Map<number, string>([
 	[14896802601, "night-1.lua"],
 
 	// Night 2
-	[2, "night-2.lua"],
+	[16667550979, "night-2.lua"],
 ]);
 
 const { GameId, PlaceId } = game;
