@@ -9,7 +9,7 @@ import {
 } from "@rbxts/services";
 import { Destructible, Node } from "types";
 
-if (_G["residence-massacre"]) throw "This program is already running!";
+if (_G["residence-massacre"] === true) throw "This program is already running!";
 _G["residence-massacre"] = true;
 
 /************************************************************
