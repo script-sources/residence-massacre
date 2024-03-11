@@ -6,7 +6,7 @@ local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 local Workspace = game:GetService("Workspace")
-if _G["residence-massacre"] then
+if _G["residence-massacre"] == true then
 	error("This program is already running!")
 end
 _G["residence-massacre"] = true
