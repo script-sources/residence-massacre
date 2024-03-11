@@ -6,10 +6,10 @@ local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 local Workspace = game:GetService("Workspace")
-if _G["program id"] then
+if _G["residence-massacre"] then
 	error("This program is already running!")
 end
-_G["program id"] = true
+_G["residence-massacre"] = true
 --[[
 	***********************************************************
 	 * CONFIGURATIONS

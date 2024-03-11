@@ -9,8 +9,8 @@ import {
 } from "@rbxts/services";
 import { Destructible, Node } from "types";
 
-if (_G["program id"]) throw "This program is already running!";
-_G["program id"] = true;
+if (_G["residence-massacre"]) throw "This program is already running!";
+_G["residence-massacre"] = true;
 
 /************************************************************
  * CONFIGURATIONS
