@@ -1,12 +1,12 @@
 const ROOT = "https://raw.githubusercontent.com/script-sources/residence-massacre/main/out/";
 const SOURCES = new Map<number, string>([
-	[14437001043, "lobby.lua"],
+	[14437001043, "routes/lobby.lua"],
 
 	// Night 1
-	[14896802601, "night-1.lua"],
+	[14896802601, "routes/night-1.lua"],
 
 	// Night 2
-	[16667550979, "night-2.lua"],
+	[16667550979, "routes/night-2.lua"],
 ]);
 
 const { GameId, PlaceId } = game;

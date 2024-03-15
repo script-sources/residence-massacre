@@ -15,7 +15,11 @@
 		"moduleDetection": "force",
 		"strict": true,
 		"target": "ESNext",
-		"typeRoots": ["node_modules/@rbxts", "node_modules/@script-ts/types"],
+		"typeRoots": [
+			"node_modules/@rbxts",
+			"node_modules/@script-ts",
+			"node_modules/@script-ts/types"
+		],
 
 		// configurable
 		"rootDir": "src",
