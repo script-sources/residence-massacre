@@ -14,5 +14,59 @@
 
 	"editor.codeActionsOnSave": {
 		"source.organizeImports": "always"
-	}
+	},
+	"hidefiles.configurationType": "local",
+	"hidefiles.globalConfig": {
+		"profiles": [
+			{
+				"name": "Default",
+				"detail": "",
+				"description": "Test",
+				"hidden": [
+					".vscode/",
+					"package-lock.json",
+					".gitattributes",
+					"include/",
+					"node_modules/"
+				],
+				"peek": []
+			},
+			{
+				"name": "Strict",
+				"detail": "Hide everything not immediately required",
+				"hidden": [
+					"$Default",
+					"README.md",
+					"tsconfig.json",
+					"package.json",
+					"default.project.json",
+					".prettierrc",
+					".gitignore",
+					".eslintrc",
+					"assets/"
+				]
+			}
+		]
+	},
+	"files.exclude": {
+		"**/.git": true,
+		"**/.svn": true,
+		"**/.hg": true,
+		"**/CVS": true,
+		"**/.DS_Store": true,
+		".vscode/": true,
+		"package-lock.json": true,
+		".gitattributes": true,
+		"include/": true,
+		"node_modules/": true,
+		"README.md": true,
+		"tsconfig.json": true,
+		"package.json": true,
+		"default.project.json": true,
+		".prettierrc": true,
+		".gitignore": true,
+		".eslintrc": true,
+		"assets/": true
+	},
+	"hidefiles.selectedProfile": "Strict"
 }

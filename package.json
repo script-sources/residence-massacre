@@ -27,6 +27,6 @@
   },
   "dependencies": {
     "@rbxts/services": "^1.5.4",
-    "@script-ts/linorialib": "^1.1.6"
+    "@script-ts/linorialib": "^1.1.9"
   }
 }

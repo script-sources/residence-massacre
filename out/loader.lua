@@ -1,9 +1,9 @@
 -- Compiled with roblox-ts v2.3.0
 local ROOT = "https://raw.githubusercontent.com/script-sources/residence-massacre/main/out/"
 local SOURCES = {
-	[14437001043] = "lobby.lua",
-	[14896802601] = "night-1.lua",
-	[16667550979] = "night-2.lua",
+	[14437001043] = "routes/lobby.lua",
+	[14896802601] = "routes/night-1.lua",
+	[16667550979] = "routes/night-2.lua",
 }
 local _binding = game
 local GameId = _binding.GameId
