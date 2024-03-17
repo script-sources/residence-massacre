@@ -17,7 +17,7 @@ _G["residence-massacre"] = true;
  * Description: User-defined settings and configurations
  * Last updated: Feb. 14, 2024
  ************************************************************/
-const LOOTABLE_NAMES = new Set(["BloxyCola", "Wrench", "Battery"]);
+const LOOTABLE_NAMES = new Set(["BloxyCola", "Wrench", "Battery", "Medkit"]);
 const FLASHLIGHT_NAMES = new Set(["Flashlight", "BetterFlashlight"]);
 
 /************************************************************
@@ -104,8 +104,6 @@ class Bin {
 const Library = (() => {
 	class Window {
 		private frame: Frame;
-		private padding: UIPadding;
-		private layout: UIListLayout;
 
 		constructor() {
 			// Instances
@@ -171,11 +169,9 @@ const Library = (() => {
 			UIPadding.Parent = Frame;
 			UIListLayout.Parent = Frame;
 			Frame.Parent = ScreenGui;
-			ScreenGui.Parent = Players.LocalPlayer.WaitForChild("PlayerGui")!;
+			ScreenGui.Parent = CoreGui;
 
 			this.frame = Frame;
-			this.padding = UIPadding;
-			this.layout = UIListLayout;
 		}
 
 		public section(name: string) {
@@ -185,7 +181,6 @@ const Library = (() => {
 
 	class Section {
 		private frame: Frame;
-		private layout: UIListLayout;
 
 		constructor(name: string, parent: Frame) {
 			// Instances
@@ -224,7 +219,6 @@ const Library = (() => {
 			Frame.Parent = parent;
 
 			this.frame = Frame;
-			this.layout = UIListLayout;
 		}
 
 		public label(text: string) {
@@ -623,7 +617,7 @@ namespace DisplayController {
 		export function setGenerator(value: number) {
 			generator
 				.setColor(new Color3(1, 0, 0).Lerp(new Color3(1, 1, 1), value / 100))
-				.setValue("%.0f".format(value));
+				.setValue("%.0f%%".format(value));
 		}
 	}
 
@@ -677,6 +671,30 @@ namespace AgentController {
 		if (char) onCharacter(char);
 
 		LocalPlayer.CharacterAdded.Connect(onCharacter);
+	}
+}
+
+namespace FuseController {
+	const FuseBox = Workspace.WaitForChild("FuseBox", 5) as Model;
+	if (!FuseBox) throw "FuseBox not found!";
+	const Wires = FuseBox.WaitForChild("Wires", 5) as Folder;
+	if (!Wires) throw "Wires not found!";
+
+	const onWire = (wire: BasePart) => {
+		const sparkles = wire.WaitForChild("Sparkles", 5) as ParticleEmitter;
+		if (!sparkles) throw "Sparkles not found!";
+		const update = () => (wire.LocalTransparencyModifier = sparkles.Enabled ? 0 : 1);
+		sparkles.GetPropertyChangedSignal("Enabled").Connect(update);
+		update();
+	};
+
+	const onChild = (child: Instance) => {
+		if (child.IsA("Part")) task.defer(onWire, child);
+	};
+
+	export function __init() {
+		for (const wire of Wires.GetChildren()) task.defer(onChild, wire);
+		Wires.ChildAdded.Connect(onChild);
 	}
 }
 
@@ -751,6 +769,7 @@ namespace LightController {
  ************************************************************/
 DisplayController.__init();
 AgentController.__init();
+FuseController.__init();
 EntityController.__init();
 LootableController.__init();
 LightController.__init();

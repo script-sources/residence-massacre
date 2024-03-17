@@ -21,6 +21,7 @@ local LOOTABLE_NAMES = {
 	["BloxyCola"] = true,
 	["Wrench"] = true,
 	["Battery"] = true,
+	["Medkit"] = true,
 }
 local FLASHLIGHT_NAMES = {
 	["Flashlight"] = true,
@@ -176,10 +177,8 @@ local Library = (function()
 			UIPadding.Parent = Frame
 			UIListLayout.Parent = Frame
 			Frame.Parent = ScreenGui
-			ScreenGui.Parent = Players.LocalPlayer:WaitForChild("PlayerGui")
+			ScreenGui.Parent = CoreGui
 			self.frame = Frame
-			self.padding = UIPadding
-			self.layout = UIListLayout
 		end
 		function Window:section(name)
 			return Section.new(name, self.frame)
@@ -230,7 +229,6 @@ local Library = (function()
 			Header.Parent = Frame
 			Frame.Parent = parent
 			self.frame = Frame
-			self.layout = UIListLayout
 		end
 		function Section:label(text)
 			return Label.new(text, self.frame)
@@ -680,7 +678,7 @@ do
 		local function setGenerator(value)
 			local _fn = generator:setColor(Color3.new(1, 0, 0):Lerp(Color3.new(1, 1, 1), value / 100))
 			local _value = value
-			_fn:setValue(string.format("%.0f", _value))
+			_fn:setValue(string.format("%.0f%%", _value))
 		end
 		_container_1.setGenerator = setGenerator
 	end
@@ -741,6 +739,42 @@ do
 			onCharacter(char)
 		end
 		LocalPlayer.CharacterAdded:Connect(onCharacter)
+	end
+	_container.__init = __init
+end
+local FuseController = {}
+do
+	local _container = FuseController
+	local FuseBox = Workspace:WaitForChild("FuseBox", 5)
+	if not FuseBox then
+		error("FuseBox not found!")
+	end
+	local Wires = FuseBox:WaitForChild("Wires", 5)
+	if not Wires then
+		error("Wires not found!")
+	end
+	local onWire = function(wire)
+		local sparkles = wire:WaitForChild("Sparkles", 5)
+		if not sparkles then
+			error("Sparkles not found!")
+		end
+		local update = function()
+			wire.LocalTransparencyModifier = if sparkles.Enabled then 0 else 1
+			return wire.LocalTransparencyModifier
+		end
+		sparkles:GetPropertyChangedSignal("Enabled"):Connect(update)
+		update()
+	end
+	local onChild = function(child)
+		if child:IsA("Part") then
+			task.defer(onWire, child)
+		end
+	end
+	local function __init()
+		for _, wire in Wires:GetChildren() do
+			task.defer(onChild, wire)
+		end
+		Wires.ChildAdded:Connect(onChild)
 	end
 	_container.__init = __init
 end
@@ -828,6 +862,7 @@ end
 ]]
 DisplayController.__init()
 AgentController.__init()
+FuseController.__init()
 EntityController.__init()
 LootableController.__init()
 LightController.__init()

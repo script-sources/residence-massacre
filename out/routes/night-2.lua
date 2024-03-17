@@ -21,6 +21,7 @@ local LOOTABLE_NAMES = {
 	["BloxyCola"] = true,
 	["Wrench"] = true,
 	["Battery"] = true,
+	["Medkit"] = true,
 }
 local FLASHLIGHT_NAMES = {
 	["Flashlight"] = true,
@@ -176,10 +177,8 @@ local Library = (function()
 			UIPadding.Parent = Frame
 			UIListLayout.Parent = Frame
 			Frame.Parent = ScreenGui
-			ScreenGui.Parent = Players.LocalPlayer:WaitForChild("PlayerGui")
+			ScreenGui.Parent = CoreGui
 			self.frame = Frame
-			self.padding = UIPadding
-			self.layout = UIListLayout
 		end
 		function Window:section(name)
 			return Section.new(name, self.frame)
@@ -230,7 +229,6 @@ local Library = (function()
 			Header.Parent = Frame
 			Frame.Parent = parent
 			self.frame = Frame
-			self.layout = UIListLayout
 		end
 		function Section:label(text)
 			return Label.new(text, self.frame)
@@ -418,64 +416,6 @@ do
 		-- Initialize:
 		Name.Parent = BillboardGui
 		Indicator.Parent = BillboardGui
-		BillboardGui.Parent = CoreGui
-		bin:add(BillboardGui)
-	end
-end
-local LightComponent
-do
-	local super = BaseComponent
-	LightComponent = setmetatable({}, {
-		__tostring = function()
-			return "LightComponent"
-		end,
-		__index = super,
-	})
-	LightComponent.__index = LightComponent
-	function LightComponent.new(...)
-		local self = setmetatable({}, LightComponent)
-		return self:constructor(...) or self
-	end
-	function LightComponent:constructor(instance)
-		super.constructor(self, instance)
-		local _binding = self
-		local bin = _binding.bin
-		for _, child in instance:GetChildren() do
-			self:onChild(child)
-		end
-		bin:add(instance.ChildAdded:Connect(function(child)
-			return self:onChild(child)
-		end))
-	end
-	function LightComponent:onChild(child)
-		local name = child.Name
-		if name == "Switch" then
-			local root = child:WaitForChild("Detector", 6)
-			if not root then
-				error("Detector not found!")
-			end
-			self:createVisual(root)
-		end
-	end
-	function LightComponent:createVisual(root)
-		local _binding = self
-		local bin = _binding.bin
-		-- Instances:
-		local BillboardGui = Instance.new("BillboardGui")
-		local Frame = Instance.new("Frame")
-		-- Properties:
-		BillboardGui.Adornee = root
-		BillboardGui.AlwaysOnTop = true
-		BillboardGui.ResetOnSpawn = false
-		BillboardGui.Size = UDim2.new(0.25, 0, 0.25, 0)
-		BillboardGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-		Frame.AnchorPoint = Vector2.new(0.5, 0.5)
-		Frame.BackgroundColor3 = Color3.fromRGB(255, 255, 150)
-		Frame.BorderSizePixel = 0
-		Frame.Position = UDim2.new(0.5, 0, 0.5, 0)
-		Frame.Size = UDim2.new(1, 0, 1, 0)
-		-- Initialize:
-		Frame.Parent = BillboardGui
 		BillboardGui.Parent = CoreGui
 		bin:add(BillboardGui)
 	end
@@ -675,6 +615,66 @@ do
 		return "Stalker"
 	end
 end
+local RatComponent
+do
+	local super = BaseComponent
+	RatComponent = setmetatable({}, {
+		__tostring = function()
+			return "RatComponent"
+		end,
+		__index = super,
+	})
+	RatComponent.__index = RatComponent
+	function RatComponent.new(...)
+		local self = setmetatable({}, RatComponent)
+		return self:constructor(...) or self
+	end
+	function RatComponent:constructor(instance, progress)
+		super.constructor(self, instance)
+		local root = instance:WaitForChild("RootPart", 5)
+		if not root then
+			error("Rat is missing its RootPart!")
+		end
+		progress = progress or (instance:WaitForChild("Progress", 5))
+		if not progress then
+			error("Rat is missing the Progress state!")
+		end
+		self.root = root
+		self.progress = progress
+		self:createVisual()
+	end
+	function RatComponent:createVisual()
+		local _binding = self
+		local root = _binding.root
+		local progress = _binding.progress
+		local bin = _binding.bin
+		-- Instances:
+		local BillboardGui = Instance.new("BillboardGui")
+		local Status = Instance.new("TextLabel")
+		-- Properties:
+		BillboardGui.Adornee = root
+		BillboardGui.AlwaysOnTop = true
+		BillboardGui.ResetOnSpawn = false
+		BillboardGui.Size = UDim2.new(0, 200, 0, 100)
+		BillboardGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+		Status.BackgroundTransparency = 1
+		Status.FontFace = Font.new("rbxasset://fonts/families/Nunito.json", Enum.FontWeight.Bold)
+		Status.AnchorPoint = Vector2.new(0.5, 0.5)
+		Status.Position = UDim2.new(0.5, 0, 0.5, 0)
+		Status.Size = UDim2.new(1, 0, 0, 14)
+		Status.Text = "Rat [0%]"
+		Status.TextColor3 = Color3.fromRGB(255, 0, 0)
+		Status.TextSize = 14
+		Status.TextStrokeTransparency = 0.5
+		Status.Parent = BillboardGui
+		BillboardGui.Parent = CoreGui
+		bin:add(BillboardGui)
+		bin:add(progress.Changed:Connect(function(value)
+			BillboardGui.Enabled = value > 0
+			Status.Text = `Rat [{value}]`
+		end))
+	end
+end
 --[[
 	***********************************************************
 	 * CONTROLLERS
@@ -688,6 +688,14 @@ do
 	local GameState = ReplicatedStorage:WaitForChild("GameState", 5)
 	if not GameState then
 		error("GameState not found!")
+	end
+	local AlarmsDown = GameState:WaitForChild("AlarmsDown", 5)
+	if not AlarmsDown then
+		error("AlarmsDown not found!")
+	end
+	local FuelValue = GameState:WaitForChild("Fuel", 5)
+	if not FuelValue then
+		error("Fuel not found!")
 	end
 	local MoneyValue = GameState:WaitForChild("Money", 5)
 	if not MoneyValue then
@@ -740,7 +748,19 @@ do
 	do
 		local _container_1 = Factory
 		local factory = window:section("Factory")
+		local alarm = factory:state("Alarm:")
+		local fuel = factory:state("Fuel:")
 		local money = factory:state("Money:"):setColor(Color3.new(0, 1, 0))
+		local function setAlarm(value)
+			alarm:setColor(if value then Color3.new(1, 0, 0) else Color3.new(1, 1, 1)):setValue(if value then "OFF" else "ON")
+		end
+		_container_1.setAlarm = setAlarm
+		local function setFuel(value)
+			local _fn = fuel
+			local _arg0 = (value / 3) * 100
+			_fn:setValue(string.format("%.0f%%", _arg0))
+		end
+		_container_1.setFuel = setFuel
 		local function setMoney(value)
 			local _fn = money
 			local _value = value
@@ -756,7 +776,15 @@ do
 		Stalker.setActive(false)
 		Stalker.setSeeking(false)
 		Stalker.setStunned(false)
+		Factory.setAlarm(AlarmsDown.Value)
+		Factory.setFuel(FuelValue.Value)
 		Factory.setMoney(MoneyValue.Value)
+		AlarmsDown.Changed:Connect(function(value)
+			return Factory.setAlarm(value)
+		end)
+		FuelValue.Changed:Connect(function(value)
+			return Factory.setFuel(value)
+		end)
 		MoneyValue.Changed:Connect(function(value)
 			return Factory.setMoney(value)
 		end)
@@ -773,13 +801,6 @@ do
 	local onCharacter = function(character)
 		_container.instance = character
 		_container.root = character:WaitForChild("HumanoidRootPart")
-		local client = _container.instance:WaitForChild("Sprint")
-		local stamina = client:WaitForChild("Stam")
-		stamina.Changed:Connect(function(value)
-			if value <= 1.05 then
-				stamina.Value = 1.05
-			end
-		end)
 		local bin = Bin.new()
 		local onChild = function(child)
 			local name = child.Name
@@ -797,6 +818,13 @@ do
 		for _, child in character:GetChildren() do
 			onChild(child)
 		end
+		local client = _container.instance:WaitForChild("Sprint")
+		local stamina = client:WaitForChild("Stam")
+		stamina.Changed:Connect(function(value)
+			if value <= 1.05 then
+				stamina.Value = 1.05
+			end
+		end)
 	end
 	local function __init()
 		local char = LocalPlayer.Character
@@ -804,6 +832,69 @@ do
 			onCharacter(char)
 		end
 		LocalPlayer.CharacterAdded:Connect(onCharacter)
+	end
+	_container.__init = __init
+end
+local FuseController = {}
+do
+	local _container = FuseController
+	local FuseBox = Workspace:WaitForChild("FuseBox", 5)
+	if not FuseBox then
+		error("FuseBox not found!")
+	end
+	local Wires = FuseBox:WaitForChild("Wires", 5)
+	if not Wires then
+		error("Wires not found!")
+	end
+	local onWire = function(wire)
+		local sparkles = wire:WaitForChild("Sparkles", 5)
+		if not sparkles then
+			error("Sparkles not found!")
+		end
+		local update = function()
+			wire.LocalTransparencyModifier = if sparkles.Enabled then 0 else 1
+			return wire.LocalTransparencyModifier
+		end
+		sparkles:GetPropertyChangedSignal("Enabled"):Connect(update)
+		update()
+	end
+	local onChild = function(child)
+		if child:IsA("Part") then
+			task.defer(onWire, child)
+		end
+	end
+	local function __init()
+		for _, wire in Wires:GetChildren() do
+			task.defer(onChild, wire)
+		end
+		Wires.ChildAdded:Connect(onChild)
+	end
+	_container.__init = __init
+end
+local LootableController = {}
+do
+	local _container = LootableController
+	local ItemSpawns = Workspace:WaitForChild("ItemSpots", 5)
+	if not ItemSpawns then
+		error("ItemSpots folder not found!")
+	end
+	local onPossibleLoot = function(instance)
+		local id = instance.Name
+		if LOOTABLE_NAMES[id] ~= nil then
+			LootableComponent.new(instance)
+		end
+	end
+	local onItemSpot = function(item)
+		item.ChildAdded:Connect(onPossibleLoot)
+		for _, child in item:GetChildren() do
+			task.defer(onPossibleLoot, child)
+		end
+	end
+	local function __init()
+		for _, child in ItemSpawns:GetChildren() do
+			task.defer(onItemSpot, child)
+		end
+		ItemSpawns.ChildAdded:Connect(onItemSpot)
 	end
 	_container.__init = __init
 end
@@ -841,48 +932,44 @@ do
 	end
 	_container.__init = __init
 end
-local LootableController = {}
+local RatController = {}
 do
-	local _container = LootableController
-	local ItemSpawns = Workspace:WaitForChild("ItemSpots", 5)
-	if not ItemSpawns then
-		error("ItemSpots folder not found!")
+	local _container = RatController
+	local FloodLights = Workspace:WaitForChild("Floodlights", 5)
+	if not FloodLights then
+		error("Floodlights folder not found!")
 	end
-	local onPossibleLoot = function(instance)
-		local id = instance.Name
-		if LOOTABLE_NAMES[id] ~= nil then
-			LootableComponent.new(instance)
+	local Grids = Workspace:WaitForChild("Grids", 5)
+	if not Grids then
+		error("Grids folder not found!")
+	end
+	local onPossibleRat = function(instance)
+		if instance.Name == "Rat" and instance:IsA("Model") then
+			RatComponent.new(instance)
 		end
 	end
-	local onItemSpot = function(item)
-		item.ChildAdded:Connect(onPossibleLoot)
-		for _, child in item:GetChildren() do
-			task.defer(onPossibleLoot, child)
+	local onGrid = function(grid)
+		local rat = grid:WaitForChild("Rat", 5)
+		local progress = grid:WaitForChild("Progress", 5)
+		if rat and progress then
+			RatComponent.new(rat, progress)
+		else
+			error("Grid Rat not found!")
 		end
 	end
 	local function __init()
-		for _, child in ItemSpawns:GetChildren() do
-			task.defer(onItemSpot, child)
+		for _, light in FloodLights:GetDescendants() do
+			task.defer(onPossibleRat, light)
 		end
-		ItemSpawns.ChildAdded:Connect(onItemSpot)
-	end
-	_container.__init = __init
-end
-local LightController = {}
-do
-	local _container = LightController
-	local LightFolder = Workspace:WaitForChild("Lights", 5)
-	if not LightFolder then
-		error("Lights folder not found!")
-	end
-	local onLight = function(light)
-		LightComponent.new(light)
-	end
-	local function __init()
-		for _, child in LightFolder:GetChildren() do
-			task.defer(onLight, child)
+		FloodLights.DescendantAdded:Connect(onPossibleRat)
+		for _, grid in Grids:GetChildren() do
+			task.defer(onGrid, grid)
 		end
-		LightFolder.ChildAdded:Connect(onLight)
+		Grids.ChildAdded:Connect(onGrid)
+		for _, child in Workspace:GetChildren() do
+			task.defer(onPossibleRat, child)
+		end
+		Workspace.ChildAdded:Connect(onPossibleRat)
 	end
 	_container.__init = __init
 end
@@ -895,8 +982,9 @@ end
 ]]
 DisplayController.__init()
 AgentController.__init()
+FuseController.__init()
 EntityController.__init()
 LootableController.__init()
-LightController.__init()
+RatController.__init()
 print("Initialized Successfully")
 return "Initialized Successfully"

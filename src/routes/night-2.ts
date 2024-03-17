@@ -17,7 +17,7 @@ _G["residence-massacre"] = true;
  * Description: User-defined settings and configurations
  * Last updated: Feb. 14, 2024
  ************************************************************/
-const LOOTABLE_NAMES = new Set(["BloxyCola", "Wrench", "Battery"]);
+const LOOTABLE_NAMES = new Set(["BloxyCola", "Wrench", "Battery", "Medkit"]);
 const FLASHLIGHT_NAMES = new Set(["Flashlight", "BetterFlashlight"]);
 
 /************************************************************
@@ -104,8 +104,6 @@ class Bin {
 const Library = (() => {
 	class Window {
 		private frame: Frame;
-		private padding: UIPadding;
-		private layout: UIListLayout;
 
 		constructor() {
 			// Instances
@@ -171,11 +169,9 @@ const Library = (() => {
 			UIPadding.Parent = Frame;
 			UIListLayout.Parent = Frame;
 			Frame.Parent = ScreenGui;
-			ScreenGui.Parent = Players.LocalPlayer.WaitForChild("PlayerGui")!;
+			ScreenGui.Parent = CoreGui;
 
 			this.frame = Frame;
-			this.padding = UIPadding;
-			this.layout = UIListLayout;
 		}
 
 		public section(name: string) {
@@ -185,7 +181,6 @@ const Library = (() => {
 
 	class Section {
 		private frame: Frame;
-		private layout: UIListLayout;
 
 		constructor(name: string, parent: Frame) {
 			// Instances
@@ -224,7 +219,6 @@ const Library = (() => {
 			Frame.Parent = parent;
 
 			this.frame = Frame;
-			this.layout = UIListLayout;
 		}
 
 		public label(text: string) {
@@ -404,52 +398,6 @@ class LootableComponent extends BaseComponent<Instance> {
 	}
 }
 
-class LightComponent extends BaseComponent<Model> {
-	constructor(instance: Model) {
-		super(instance);
-
-		const { bin } = this;
-		for (const child of instance.GetChildren()) this.onChild(child);
-		bin.add(instance.ChildAdded.Connect((child) => this.onChild(child)));
-	}
-
-	protected onChild(child: Instance) {
-		const name = child.Name;
-		if (name === "Switch") {
-			const root = child.WaitForChild("Detector", 6) as BasePart;
-			if (!root) throw "Detector not found!";
-			this.createVisual(root);
-		}
-	}
-
-	protected createVisual(root: BasePart) {
-		const { bin } = this;
-
-		// Instances:
-		const BillboardGui = new Instance("BillboardGui");
-		const Frame = new Instance("Frame");
-
-		// Properties:
-		BillboardGui.Adornee = root;
-		BillboardGui.AlwaysOnTop = true;
-		BillboardGui.ResetOnSpawn = false;
-		BillboardGui.Size = new UDim2(0.25, 0, 0.25, 0);
-		BillboardGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling;
-
-		Frame.AnchorPoint = new Vector2(0.5, 0.5);
-		Frame.BackgroundColor3 = Color3.fromRGB(255, 255, 150);
-		Frame.BorderSizePixel = 0;
-		Frame.Position = new UDim2(0.5, 0, 0.5, 0);
-		Frame.Size = new UDim2(1, 0, 1, 0);
-
-		// Initialize:
-		Frame.Parent = BillboardGui;
-		BillboardGui.Parent = CoreGui;
-
-		bin.add(BillboardGui);
-	}
-}
-
 class EntityComponent extends BaseComponent<Model> {
 	public readonly root: BasePart;
 	public readonly configs: Folder;
@@ -614,6 +562,61 @@ class StalkerComponent extends EntityComponent {
 	}
 }
 
+class RatComponent extends BaseComponent<Model> {
+	private readonly root: BasePart;
+	private readonly progress: NumberValue;
+
+	constructor(instance: Model, progress?: NumberValue) {
+		super(instance);
+
+		const root = instance.WaitForChild("RootPart", 5) as BasePart;
+		if (!root) throw "Rat is missing its RootPart!";
+		progress = progress ?? (instance.WaitForChild("Progress", 5) as NumberValue);
+		if (!progress) throw "Rat is missing the Progress state!";
+
+		this.root = root;
+		this.progress = progress;
+
+		this.createVisual();
+	}
+
+	protected createVisual() {
+		const { root, progress, bin } = this;
+
+		// Instances:
+		const BillboardGui = new Instance("BillboardGui");
+		const Status = new Instance("TextLabel");
+
+		// Properties:
+		BillboardGui.Adornee = root;
+		BillboardGui.AlwaysOnTop = true;
+		BillboardGui.ResetOnSpawn = false;
+		BillboardGui.Size = new UDim2(0, 200, 0, 100);
+		BillboardGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling;
+
+		Status.BackgroundTransparency = 1;
+		Status.FontFace = new Font("rbxasset://fonts/families/Nunito.json", Enum.FontWeight.Bold);
+		Status.AnchorPoint = new Vector2(0.5, 0.5);
+		Status.Position = new UDim2(0.5, 0, 0.5, 0);
+		Status.Size = new UDim2(1, 0, 0, 14);
+		Status.Text = "Rat [0%]";
+		Status.TextColor3 = Color3.fromRGB(255, 0, 0);
+		Status.TextSize = 14;
+		Status.TextStrokeTransparency = 0.5;
+
+		Status.Parent = BillboardGui;
+		BillboardGui.Parent = CoreGui;
+
+		bin.add(BillboardGui);
+		bin.add(
+			progress.Changed.Connect((value) => {
+				BillboardGui.Enabled = value > 0;
+				Status.Text = `Rat [${value}]`;
+			}),
+		);
+	}
+}
+
 /************************************************************
  * CONTROLLERS
  * Description: Singletons that are used once
@@ -622,6 +625,10 @@ class StalkerComponent extends EntityComponent {
 namespace DisplayController {
 	const GameState = ReplicatedStorage.WaitForChild("GameState", 5) as StringValue;
 	if (!GameState) throw "GameState not found!";
+	const AlarmsDown = GameState.WaitForChild("AlarmsDown", 5) as BoolValue;
+	if (!AlarmsDown) throw "AlarmsDown not found!";
+	const FuelValue = GameState.WaitForChild("Fuel", 5) as NumberValue;
+	if (!FuelValue) throw "Fuel not found!";
 	const MoneyValue = GameState.WaitForChild("Money", 5) as NumberValue;
 	if (!MoneyValue) throw "Money not found!";
 
@@ -667,7 +674,17 @@ namespace DisplayController {
 
 	export namespace Factory {
 		const factory = window.section("Factory");
+		const alarm = factory.state("Alarm:");
+		const fuel = factory.state("Fuel:");
 		const money = factory.state("Money:").setColor(new Color3(0, 1, 0));
+
+		export function setAlarm(value: boolean) {
+			alarm.setColor(value ? new Color3(1, 0, 0) : new Color3(1, 1, 1)).setValue(value ? "OFF" : "ON");
+		}
+
+		export function setFuel(value: number) {
+			fuel.setValue("%.0f%%".format((value / 3) * 100));
+		}
 
 		export function setMoney(value: number) {
 			money.setValue("$%.0f".format(value));
@@ -683,8 +700,12 @@ namespace DisplayController {
 		Stalker.setSeeking(false);
 		Stalker.setStunned(false);
 
+		Factory.setAlarm(AlarmsDown.Value);
+		Factory.setFuel(FuelValue.Value);
 		Factory.setMoney(MoneyValue.Value);
 
+		AlarmsDown.Changed.Connect((value) => Factory.setAlarm(value));
+		FuelValue.Changed.Connect((value) => Factory.setFuel(value));
 		MoneyValue.Changed.Connect((value) => Factory.setMoney(value));
 	}
 }
@@ -701,12 +722,6 @@ namespace AgentController {
 		instance = character;
 		root = character.WaitForChild("HumanoidRootPart") as BasePart;
 
-		const client = instance.WaitForChild("Sprint") as Script;
-		const stamina = client.WaitForChild("Stam") as NumberValue;
-		stamina.Changed.Connect((value) => {
-			if (value <= 1.05) stamina.Value = 1.05;
-		});
-
 		const bin = new Bin();
 		const onChild = (child: Instance) => {
 			const name = child.Name;
@@ -719,6 +734,12 @@ namespace AgentController {
 		};
 		bin.add(character.ChildAdded.Connect(onChild));
 		for (const child of character.GetChildren()) onChild(child);
+
+		const client = instance.WaitForChild("Sprint") as Script;
+		const stamina = client.WaitForChild("Stam") as NumberValue;
+		stamina.Changed.Connect((value) => {
+			if (value <= 1.05) stamina.Value = 1.05;
+		});
 	};
 
 	export function __init() {
@@ -726,6 +747,50 @@ namespace AgentController {
 		if (char) onCharacter(char);
 
 		LocalPlayer.CharacterAdded.Connect(onCharacter);
+	}
+}
+
+namespace FuseController {
+	const FuseBox = Workspace.WaitForChild("FuseBox", 5) as Model;
+	if (!FuseBox) throw "FuseBox not found!";
+	const Wires = FuseBox.WaitForChild("Wires", 5) as Folder;
+	if (!Wires) throw "Wires not found!";
+
+	const onWire = (wire: BasePart) => {
+		const sparkles = wire.WaitForChild("Sparkles", 5) as ParticleEmitter;
+		if (!sparkles) throw "Sparkles not found!";
+		const update = () => (wire.LocalTransparencyModifier = sparkles.Enabled ? 0 : 1);
+		sparkles.GetPropertyChangedSignal("Enabled").Connect(update);
+		update();
+	};
+
+	const onChild = (child: Instance) => {
+		if (child.IsA("Part")) task.defer(onWire, child);
+	};
+
+	export function __init() {
+		for (const wire of Wires.GetChildren()) task.defer(onChild, wire);
+		Wires.ChildAdded.Connect(onChild);
+	}
+}
+
+namespace LootableController {
+	const ItemSpawns = Workspace.WaitForChild("ItemSpots", 5) as Folder;
+	if (!ItemSpawns) throw "ItemSpots folder not found!";
+
+	const onPossibleLoot = (instance: Instance) => {
+		const id = instance.Name;
+		if (LOOTABLE_NAMES.has(id)) new LootableComponent(instance);
+	};
+
+	const onItemSpot = (item: Instance) => {
+		item.ChildAdded.Connect(onPossibleLoot);
+		for (const child of item.GetChildren()) task.defer(onPossibleLoot, child);
+	};
+
+	export function __init() {
+		for (const child of ItemSpawns.GetChildren()) task.defer(onItemSpot, child);
+		ItemSpawns.ChildAdded.Connect(onItemSpot);
 	}
 }
 
@@ -763,37 +828,32 @@ namespace EntityController {
 	}
 }
 
-namespace LootableController {
-	const ItemSpawns = Workspace.WaitForChild("ItemSpots", 5) as Folder;
-	if (!ItemSpawns) throw "ItemSpots folder not found!";
+namespace RatController {
+	const FloodLights = Workspace.WaitForChild("Floodlights", 5) as Folder;
+	if (!FloodLights) throw "Floodlights folder not found!";
+	const Grids = Workspace.WaitForChild("Grids", 5) as Folder;
+	if (!Grids) throw "Grids folder not found!";
 
-	const onPossibleLoot = (instance: Instance) => {
-		const id = instance.Name;
-		if (LOOTABLE_NAMES.has(id)) new LootableComponent(instance);
+	const onPossibleRat = (instance: Instance) => {
+		if (instance.Name === "Rat" && instance.IsA("Model")) new RatComponent(instance);
 	};
 
-	const onItemSpot = (item: Instance) => {
-		item.ChildAdded.Connect(onPossibleLoot);
-		for (const child of item.GetChildren()) task.defer(onPossibleLoot, child);
-	};
-
-	export function __init() {
-		for (const child of ItemSpawns.GetChildren()) task.defer(onItemSpot, child);
-		ItemSpawns.ChildAdded.Connect(onItemSpot);
-	}
-}
-
-namespace LightController {
-	const LightFolder = Workspace.WaitForChild("Lights", 5) as Folder;
-	if (!LightFolder) throw "Lights folder not found!";
-
-	const onLight = (light: Instance) => {
-		new LightComponent(light as Model);
+	const onGrid = (grid: Instance) => {
+		const rat = grid.WaitForChild("Rat", 5) as Model | undefined;
+		const progress = grid.WaitForChild("Progress", 5) as NumberValue | undefined;
+		if (rat && progress) new RatComponent(rat, progress);
+		else throw "Grid Rat not found!";
 	};
 
 	export function __init() {
-		for (const child of LightFolder.GetChildren()) task.defer(onLight, child);
-		LightFolder.ChildAdded.Connect(onLight);
+		for (const light of FloodLights.GetDescendants()) task.defer(onPossibleRat, light);
+		FloodLights.DescendantAdded.Connect(onPossibleRat);
+
+		for (const grid of Grids.GetChildren()) task.defer(onGrid, grid);
+		Grids.ChildAdded.Connect(onGrid);
+
+		for (const child of Workspace.GetChildren()) task.defer(onPossibleRat, child);
+		Workspace.ChildAdded.Connect(onPossibleRat);
 	}
 }
 
@@ -804,9 +864,10 @@ namespace LightController {
  ************************************************************/
 DisplayController.__init();
 AgentController.__init();
+FuseController.__init();
 EntityController.__init();
 LootableController.__init();
-LightController.__init();
+RatController.__init();
 
 print("Initialized Successfully");
 export = "Initialized Successfully";
