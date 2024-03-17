@@ -599,7 +599,7 @@ class RatComponent extends BaseComponent<Model> {
 		Status.AnchorPoint = new Vector2(0.5, 0.5);
 		Status.Position = new UDim2(0.5, 0, 0.5, 0);
 		Status.Size = new UDim2(1, 0, 0, 14);
-		Status.Text = "Rat [0%]";
+		Status.Text = `Rat [${progress.Value}]`;
 		Status.TextColor3 = Color3.fromRGB(255, 0, 0);
 		Status.TextSize = 14;
 		Status.TextStrokeTransparency = 0.5;
