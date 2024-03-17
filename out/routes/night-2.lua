@@ -711,6 +711,7 @@ do
 		local Status = Instance.new("TextLabel")
 		-- Properties:
 		BillboardGui.Adornee = root
+		BillboardGui.Enabled = progress.Value > 0
 		BillboardGui.AlwaysOnTop = true
 		BillboardGui.ResetOnSpawn = false
 		BillboardGui.Size = UDim2.new(0, 200, 0, 100)
@@ -730,6 +731,7 @@ do
 		bin:add(progress.Changed:Connect(function(value)
 			BillboardGui.Enabled = value > 0
 			Status.Text = `Rat [{value}]`
+			Status.TextColor3 = if value > 1 then Color3.fromRGB(255, 0, 0) else Color3.fromRGB(255, 255, 255)
 		end))
 	end
 end
@@ -1019,9 +1021,17 @@ do
 	if not Grids then
 		error("Grids folder not found!")
 	end
+	local rats = {}
 	local onPossibleRat = function(instance)
 		if instance.Name == "Rat" and instance:IsA("Model") then
-			RatComponent.new(instance)
+			local _instance = instance
+			if not (rats[_instance] ~= nil) then
+				RatComponent.new(instance)
+			else
+				print("Repeated")
+			end
+			local _instance_1 = instance
+			rats[_instance_1] = true
 		end
 	end
 	local onGrid = function(grid)
@@ -1061,6 +1071,7 @@ AgentController.__init()
 FuseController.__init()
 EntityController.__init()
 LootableController.__init()
+LightController.__init()
 RatController.__init()
 print("Initialized Successfully")
 return "Initialized Successfully"

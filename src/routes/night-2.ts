@@ -635,6 +635,7 @@ class RatComponent extends BaseComponent<Model> {
 
 		// Properties:
 		BillboardGui.Adornee = root;
+		BillboardGui.Enabled = progress.Value > 0;
 		BillboardGui.AlwaysOnTop = true;
 		BillboardGui.ResetOnSpawn = false;
 		BillboardGui.Size = new UDim2(0, 200, 0, 100);
@@ -658,6 +659,7 @@ class RatComponent extends BaseComponent<Model> {
 			progress.Changed.Connect((value) => {
 				BillboardGui.Enabled = value > 0;
 				Status.Text = `Rat [${value}]`;
+				Status.TextColor3 = value > 1 ? Color3.fromRGB(255, 0, 0) : Color3.fromRGB(255, 255, 255);
 			}),
 		);
 	}
@@ -894,8 +896,13 @@ namespace RatController {
 	const Grids = Workspace.WaitForChild("Grids", 5) as Folder;
 	if (!Grids) throw "Grids folder not found!";
 
+	const rats = new Set<Instance>();
 	const onPossibleRat = (instance: Instance) => {
-		if (instance.Name === "Rat" && instance.IsA("Model")) new RatComponent(instance);
+		if (instance.Name === "Rat" && instance.IsA("Model")) {
+			if (!rats.has(instance)) new RatComponent(instance);
+			else print("Repeated");
+			rats.add(instance);
+		}
 	};
 
 	const onGrid = (grid: Instance) => {
@@ -927,6 +934,7 @@ AgentController.__init();
 FuseController.__init();
 EntityController.__init();
 LootableController.__init();
+LightController.__init();
 RatController.__init();
 
 print("Initialized Successfully");
