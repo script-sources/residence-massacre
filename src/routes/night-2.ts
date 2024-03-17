@@ -398,6 +398,52 @@ class LootableComponent extends BaseComponent<Instance> {
 	}
 }
 
+class LightComponent extends BaseComponent<Model> {
+	constructor(instance: Model) {
+		super(instance);
+
+		const { bin } = this;
+		for (const child of instance.GetChildren()) this.onChild(child);
+		bin.add(instance.ChildAdded.Connect((child) => this.onChild(child)));
+	}
+
+	protected onChild(child: Instance) {
+		const name = child.Name;
+		if (name === "Switch") {
+			const root = child.WaitForChild("Detector", 6) as BasePart;
+			if (!root) throw "Detector not found!";
+			this.createVisual(root);
+		}
+	}
+
+	protected createVisual(root: BasePart) {
+		const { bin } = this;
+
+		// Instances:
+		const BillboardGui = new Instance("BillboardGui");
+		const Frame = new Instance("Frame");
+
+		// Properties:
+		BillboardGui.Adornee = root;
+		BillboardGui.AlwaysOnTop = true;
+		BillboardGui.ResetOnSpawn = false;
+		BillboardGui.Size = new UDim2(0.25, 0, 0.25, 0);
+		BillboardGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling;
+
+		Frame.AnchorPoint = new Vector2(0.5, 0.5);
+		Frame.BackgroundColor3 = Color3.fromRGB(255, 255, 150);
+		Frame.BorderSizePixel = 0;
+		Frame.Position = new UDim2(0.5, 0, 0.5, 0);
+		Frame.Size = new UDim2(1, 0, 1, 0);
+
+		// Initialize:
+		Frame.Parent = BillboardGui;
+		BillboardGui.Parent = CoreGui;
+
+		bin.add(BillboardGui);
+	}
+}
+
 class EntityComponent extends BaseComponent<Model> {
 	public readonly root: BasePart;
 	public readonly configs: Folder;
@@ -791,6 +837,20 @@ namespace LootableController {
 	export function __init() {
 		for (const child of ItemSpawns.GetChildren()) task.defer(onItemSpot, child);
 		ItemSpawns.ChildAdded.Connect(onItemSpot);
+	}
+}
+
+namespace LightController {
+	const LightFolder = Workspace.WaitForChild("Lights", 5) as Folder;
+	if (!LightFolder) throw "Lights folder not found!";
+
+	const onLight = (light: Instance) => {
+		new LightComponent(light as Model);
+	};
+
+	export function __init() {
+		for (const child of LightFolder.GetChildren()) task.defer(onLight, child);
+		LightFolder.ChildAdded.Connect(onLight);
 	}
 }
 

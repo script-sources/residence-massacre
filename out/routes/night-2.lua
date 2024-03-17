@@ -420,6 +420,64 @@ do
 		bin:add(BillboardGui)
 	end
 end
+local LightComponent
+do
+	local super = BaseComponent
+	LightComponent = setmetatable({}, {
+		__tostring = function()
+			return "LightComponent"
+		end,
+		__index = super,
+	})
+	LightComponent.__index = LightComponent
+	function LightComponent.new(...)
+		local self = setmetatable({}, LightComponent)
+		return self:constructor(...) or self
+	end
+	function LightComponent:constructor(instance)
+		super.constructor(self, instance)
+		local _binding = self
+		local bin = _binding.bin
+		for _, child in instance:GetChildren() do
+			self:onChild(child)
+		end
+		bin:add(instance.ChildAdded:Connect(function(child)
+			return self:onChild(child)
+		end))
+	end
+	function LightComponent:onChild(child)
+		local name = child.Name
+		if name == "Switch" then
+			local root = child:WaitForChild("Detector", 6)
+			if not root then
+				error("Detector not found!")
+			end
+			self:createVisual(root)
+		end
+	end
+	function LightComponent:createVisual(root)
+		local _binding = self
+		local bin = _binding.bin
+		-- Instances:
+		local BillboardGui = Instance.new("BillboardGui")
+		local Frame = Instance.new("Frame")
+		-- Properties:
+		BillboardGui.Adornee = root
+		BillboardGui.AlwaysOnTop = true
+		BillboardGui.ResetOnSpawn = false
+		BillboardGui.Size = UDim2.new(0.25, 0, 0.25, 0)
+		BillboardGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+		Frame.AnchorPoint = Vector2.new(0.5, 0.5)
+		Frame.BackgroundColor3 = Color3.fromRGB(255, 255, 150)
+		Frame.BorderSizePixel = 0
+		Frame.Position = UDim2.new(0.5, 0, 0.5, 0)
+		Frame.Size = UDim2.new(1, 0, 1, 0)
+		-- Initialize:
+		Frame.Parent = BillboardGui
+		BillboardGui.Parent = CoreGui
+		bin:add(BillboardGui)
+	end
+end
 local AgentController
 local EntityComponent
 do
@@ -895,6 +953,24 @@ do
 			task.defer(onItemSpot, child)
 		end
 		ItemSpawns.ChildAdded:Connect(onItemSpot)
+	end
+	_container.__init = __init
+end
+local LightController = {}
+do
+	local _container = LightController
+	local LightFolder = Workspace:WaitForChild("Lights", 5)
+	if not LightFolder then
+		error("Lights folder not found!")
+	end
+	local onLight = function(light)
+		LightComponent.new(light)
+	end
+	local function __init()
+		for _, child in LightFolder:GetChildren() do
+			task.defer(onLight, child)
+		end
+		LightFolder.ChildAdded:Connect(onLight)
 	end
 	_container.__init = __init
 end
