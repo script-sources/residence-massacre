@@ -792,24 +792,30 @@ do
 		BillboardGui.Parent = CoreGui
 		bin:add(BillboardGui)
 		bin:add(animator.AnimationPlayed:Connect(function(track)
-			local _id = track.Animation
-			if _id ~= nil then
-				_id = _id.AnimationId
+			local anim = track.Animation
+			local _name = anim
+			if _name ~= nil then
+				_name = _name.Name
 			end
-			local id = _id
+			local name = _name
 			repeat
 				local _fallthrough = false
-				if id == "rbxassetid://15377156426" then
+				if name == "GridIdle2" then
 					BillboardGui.Enabled = true
 					break
 				end
-				if id == "rbxassetid://15377153555" then
+				if name == "GridSnatch" then
 					_fallthrough = true
 				end
-				if _fallthrough or id == "rbxassetid://15390364576" then
+				if _fallthrough or name == "GridIdle" then
+					_fallthrough = true
+				end
+				if _fallthrough or name == "GridSnatchBack" then
 					BillboardGui.Enabled = false
 					break
 				end
+				print(name)
+				break
 			until true
 		end))
 	end
@@ -1100,17 +1106,9 @@ do
 	if not Grids then
 		error("Grids folder not found!")
 	end
-	local rats = {}
 	local onPossibleRat = function(instance)
 		if instance.Name == "Rat" and instance:IsA("Model") then
-			local _instance = instance
-			if not (rats[_instance] ~= nil) then
-				WireRatComponent.new(instance)
-			else
-				print("Repeated")
-			end
-			local _instance_1 = instance
-			rats[_instance_1] = true
+			WireRatComponent.new(instance)
 		end
 	end
 	local onGrid = function(grid)

@@ -715,14 +715,19 @@ class GridRatComponent extends BaseComponent<Model> {
 		bin.add(BillboardGui);
 		bin.add(
 			animator.AnimationPlayed.Connect((track) => {
-				const id = track.Animation?.AnimationId;
-				switch (id) {
-					case "rbxassetid://15377156426":
+				const anim = track.Animation;
+				const name = anim?.Name;
+				switch (name) {
+					case "GridIdle2":
 						BillboardGui.Enabled = true;
 						break;
-					case "rbxassetid://15377153555": // Idle
-					case "rbxassetid://15390364576": // Return
+					case "GridSnatch":
+					case "GridIdle":
+					case "GridSnatchBack":
 						BillboardGui.Enabled = false;
+						break;
+					default:
+						print(name);
 						break;
 				}
 			}),
@@ -961,12 +966,9 @@ namespace RatController {
 	const Grids = Workspace.WaitForChild("Grids", 5) as Folder;
 	if (!Grids) throw "Grids folder not found!";
 
-	const rats = new Set<Instance>();
 	const onPossibleRat = (instance: Instance) => {
 		if (instance.Name === "Rat" && instance.IsA("Model")) {
-			if (!rats.has(instance)) new WireRatComponent(instance);
-			else print("Repeated");
-			rats.add(instance);
+			new WireRatComponent(instance);
 		}
 	};
 
