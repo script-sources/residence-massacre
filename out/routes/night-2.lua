@@ -673,27 +673,27 @@ do
 		return "Stalker"
 	end
 end
-local RatComponent
+local WireRatComponent
 do
 	local super = BaseComponent
-	RatComponent = setmetatable({}, {
+	WireRatComponent = setmetatable({}, {
 		__tostring = function()
-			return "RatComponent"
+			return "WireRatComponent"
 		end,
 		__index = super,
 	})
-	RatComponent.__index = RatComponent
-	function RatComponent.new(...)
-		local self = setmetatable({}, RatComponent)
+	WireRatComponent.__index = WireRatComponent
+	function WireRatComponent.new(...)
+		local self = setmetatable({}, WireRatComponent)
 		return self:constructor(...) or self
 	end
-	function RatComponent:constructor(instance, progress)
+	function WireRatComponent:constructor(instance)
 		super.constructor(self, instance)
 		local root = instance:WaitForChild("RootPart", 5)
 		if not root then
 			error("Rat is missing its RootPart!")
 		end
-		progress = progress or (instance:WaitForChild("Progress", 5))
+		local progress = instance:WaitForChild("Progress", 5)
 		if not progress then
 			error("Rat is missing the Progress state!")
 		end
@@ -701,7 +701,7 @@ do
 		self.progress = progress
 		self:createVisual()
 	end
-	function RatComponent:createVisual()
+	function WireRatComponent:createVisual()
 		local _binding = self
 		local root = _binding.root
 		local progress = _binding.progress
@@ -732,6 +732,85 @@ do
 			BillboardGui.Enabled = value > 0
 			Status.Text = `Rat [{value}]`
 			Status.TextColor3 = if value > 1 then Color3.fromRGB(255, 0, 0) else Color3.fromRGB(255, 255, 255)
+		end))
+	end
+end
+local GridRatComponent
+do
+	local super = BaseComponent
+	GridRatComponent = setmetatable({}, {
+		__tostring = function()
+			return "GridRatComponent"
+		end,
+		__index = super,
+	})
+	GridRatComponent.__index = GridRatComponent
+	function GridRatComponent.new(...)
+		local self = setmetatable({}, GridRatComponent)
+		return self:constructor(...) or self
+	end
+	function GridRatComponent:constructor(instance)
+		super.constructor(self, instance)
+		local root = instance:WaitForChild("RootPart", 5)
+		if not root then
+			error("Rat is missing its RootPart!")
+		end
+		local controller = instance:WaitForChild("AnimationController", 5)
+		if not controller then
+			error("Rat is missing the AnimationController!")
+		end
+		local animator = controller:WaitForChild("Animator", 5)
+		self.root = root
+		self.animator = animator
+		self:createVisual()
+	end
+	function GridRatComponent:createVisual()
+		local _binding = self
+		local root = _binding.root
+		local animator = _binding.animator
+		local bin = _binding.bin
+		-- Instances:
+		local BillboardGui = Instance.new("BillboardGui")
+		local Status = Instance.new("TextLabel")
+		-- Properties:
+		BillboardGui.Adornee = root
+		BillboardGui.Enabled = false
+		BillboardGui.AlwaysOnTop = true
+		BillboardGui.ResetOnSpawn = false
+		BillboardGui.Size = UDim2.new(0, 200, 0, 100)
+		BillboardGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+		Status.BackgroundTransparency = 1
+		Status.FontFace = Font.new("rbxasset://fonts/families/Nunito.json", Enum.FontWeight.Bold)
+		Status.AnchorPoint = Vector2.new(0.5, 0.5)
+		Status.Position = UDim2.new(0.5, 0, 0.5, 0)
+		Status.Size = UDim2.new(1, 0, 0, 14)
+		Status.Text = "Rat"
+		Status.TextColor3 = Color3.fromRGB(255, 0, 0)
+		Status.TextSize = 14
+		Status.TextStrokeTransparency = 0.5
+		Status.Parent = BillboardGui
+		BillboardGui.Parent = CoreGui
+		bin:add(BillboardGui)
+		bin:add(animator.AnimationPlayed:Connect(function(track)
+			local _id = track.Animation
+			if _id ~= nil then
+				_id = _id.AnimationId
+			end
+			local id = _id
+			repeat
+				local _fallthrough = false
+				if id == "rbxassetid://15377156426" then
+					BillboardGui.Enabled = true
+					break
+				end
+				if id == "rbxassetid://15377153555" then
+					_fallthrough = true
+				end
+				if _fallthrough or id == "rbxassetid://15390364576" then
+					BillboardGui.Enabled = false
+					break
+				end
+			until true
 		end))
 	end
 end
@@ -1026,7 +1105,7 @@ do
 		if instance.Name == "Rat" and instance:IsA("Model") then
 			local _instance = instance
 			if not (rats[_instance] ~= nil) then
-				RatComponent.new(instance)
+				WireRatComponent.new(instance)
 			else
 				print("Repeated")
 			end
@@ -1036,9 +1115,8 @@ do
 	end
 	local onGrid = function(grid)
 		local rat = grid:WaitForChild("Rat", 5)
-		local progress = grid:WaitForChild("Progress", 5)
-		if rat and progress then
-			RatComponent.new(rat, progress)
+		if rat then
+			GridRatComponent.new(rat)
 		else
 			error("Grid Rat not found!")
 		end

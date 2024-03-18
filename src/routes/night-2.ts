@@ -608,16 +608,16 @@ class StalkerComponent extends EntityComponent {
 	}
 }
 
-class RatComponent extends BaseComponent<Model> {
+class WireRatComponent extends BaseComponent<Model> {
 	private readonly root: BasePart;
 	private readonly progress: NumberValue;
 
-	constructor(instance: Model, progress?: NumberValue) {
+	constructor(instance: Model) {
 		super(instance);
 
 		const root = instance.WaitForChild("RootPart", 5) as BasePart;
 		if (!root) throw "Rat is missing its RootPart!";
-		progress = progress ?? (instance.WaitForChild("Progress", 5) as NumberValue);
+		const progress = instance.WaitForChild("Progress", 5) as NumberValue;
 		if (!progress) throw "Rat is missing the Progress state!";
 
 		this.root = root;
@@ -660,6 +660,71 @@ class RatComponent extends BaseComponent<Model> {
 				BillboardGui.Enabled = value > 0;
 				Status.Text = `Rat [${value}]`;
 				Status.TextColor3 = value > 1 ? Color3.fromRGB(255, 0, 0) : Color3.fromRGB(255, 255, 255);
+			}),
+		);
+	}
+}
+
+class GridRatComponent extends BaseComponent<Model> {
+	private readonly root: BasePart;
+	private readonly animator: Animator;
+
+	constructor(instance: Model) {
+		super(instance);
+
+		const root = instance.WaitForChild("RootPart", 5) as BasePart;
+		if (!root) throw "Rat is missing its RootPart!";
+		const controller = instance.WaitForChild("AnimationController", 5) as AnimationController;
+		if (!controller) throw "Rat is missing the AnimationController!";
+		const animator = controller.WaitForChild("Animator", 5) as Animator;
+
+		this.root = root;
+		this.animator = animator;
+
+		this.createVisual();
+	}
+
+	protected createVisual() {
+		const { root, animator, bin } = this;
+
+		// Instances:
+		const BillboardGui = new Instance("BillboardGui");
+		const Status = new Instance("TextLabel");
+
+		// Properties:
+		BillboardGui.Adornee = root;
+		BillboardGui.Enabled = false;
+		BillboardGui.AlwaysOnTop = true;
+		BillboardGui.ResetOnSpawn = false;
+		BillboardGui.Size = new UDim2(0, 200, 0, 100);
+		BillboardGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling;
+
+		Status.BackgroundTransparency = 1;
+		Status.FontFace = new Font("rbxasset://fonts/families/Nunito.json", Enum.FontWeight.Bold);
+		Status.AnchorPoint = new Vector2(0.5, 0.5);
+		Status.Position = new UDim2(0.5, 0, 0.5, 0);
+		Status.Size = new UDim2(1, 0, 0, 14);
+		Status.Text = "Rat";
+		Status.TextColor3 = Color3.fromRGB(255, 0, 0);
+		Status.TextSize = 14;
+		Status.TextStrokeTransparency = 0.5;
+
+		Status.Parent = BillboardGui;
+		BillboardGui.Parent = CoreGui;
+
+		bin.add(BillboardGui);
+		bin.add(
+			animator.AnimationPlayed.Connect((track) => {
+				const id = track.Animation?.AnimationId;
+				switch (id) {
+					case "rbxassetid://15377156426":
+						BillboardGui.Enabled = true;
+						break;
+					case "rbxassetid://15377153555": // Idle
+					case "rbxassetid://15390364576": // Return
+						BillboardGui.Enabled = false;
+						break;
+				}
 			}),
 		);
 	}
@@ -899,7 +964,7 @@ namespace RatController {
 	const rats = new Set<Instance>();
 	const onPossibleRat = (instance: Instance) => {
 		if (instance.Name === "Rat" && instance.IsA("Model")) {
-			if (!rats.has(instance)) new RatComponent(instance);
+			if (!rats.has(instance)) new WireRatComponent(instance);
 			else print("Repeated");
 			rats.add(instance);
 		}
@@ -907,8 +972,7 @@ namespace RatController {
 
 	const onGrid = (grid: Instance) => {
 		const rat = grid.WaitForChild("Rat", 5) as Model | undefined;
-		const progress = grid.WaitForChild("Progress", 5) as NumberValue | undefined;
-		if (rat && progress) new RatComponent(rat, progress);
+		if (rat) new GridRatComponent(rat);
 		else throw "Grid Rat not found!";
 	};
 
