@@ -792,16 +792,16 @@ namespace DisplayController {
 
 	export namespace Factory {
 		const factory = window.section("Factory");
-		const alarm = factory.state("Alarm:");
-		const fuel = factory.state("Fuel:");
+		const radio = factory.state("Radio:");
+		const power = factory.state("Power:");
 		const money = factory.state("Money:").setColor(new Color3(0, 1, 0));
 
-		export function setAlarm(value: boolean) {
-			alarm.setColor(value ? new Color3(1, 0, 0) : new Color3(1, 1, 1)).setValue(value ? "OFF" : "ON");
+		export function setRadio(value: boolean) {
+			radio.setColor(value ? new Color3(1, 0, 0) : new Color3(1, 1, 1)).setValue(value ? "OFF" : "ON");
 		}
 
-		export function setFuel(value: number) {
-			fuel.setValue("%.0f%%".format((value / 3) * 100));
+		export function setPower(value: number) {
+			power.setValue("%.0f%%".format((value / 3) * 100));
 		}
 
 		export function setMoney(value: number) {
@@ -818,12 +818,12 @@ namespace DisplayController {
 		Stalker.setSeeking(false);
 		Stalker.setStunned(false);
 
-		Factory.setAlarm(AlarmsDown.Value);
-		Factory.setFuel(FuelValue.Value);
+		Factory.setRadio(AlarmsDown.Value);
+		Factory.setPower(FuelValue.Value);
 		Factory.setMoney(MoneyValue.Value);
 
-		AlarmsDown.Changed.Connect((value) => Factory.setAlarm(value));
-		FuelValue.Changed.Connect((value) => Factory.setFuel(value));
+		AlarmsDown.Changed.Connect((value) => Factory.setRadio(value));
+		FuelValue.Changed.Connect((value) => Factory.setPower(value));
 		MoneyValue.Changed.Connect((value) => Factory.setMoney(value));
 	}
 }
@@ -877,7 +877,12 @@ namespace FuseController {
 	const onWire = (wire: BasePart) => {
 		const sparkles = wire.WaitForChild("Sparkles", 5) as ParticleEmitter;
 		if (!sparkles) throw "Sparkles not found!";
-		const update = () => (wire.LocalTransparencyModifier = sparkles.Enabled ? 0 : 1);
+		const update = () => {
+			const enabled = sparkles.Enabled;
+			wire.LocalTransparencyModifier = enabled ? 0 : 1;
+			const cd = wire.FindFirstChildWhichIsA("ClickDetector");
+			if (cd) cd.MaxActivationDistance = enabled ? 50 : 8;
+		};
 		sparkles.GetPropertyChangedSignal("Enabled").Connect(update);
 		update();
 	};

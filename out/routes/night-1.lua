@@ -759,8 +759,12 @@ do
 			error("Sparkles not found!")
 		end
 		local update = function()
-			wire.LocalTransparencyModifier = if sparkles.Enabled then 0 else 1
-			return wire.LocalTransparencyModifier
+			local enabled = sparkles.Enabled
+			wire.LocalTransparencyModifier = if enabled then 0 else 1
+			local cd = wire:FindFirstChildWhichIsA("ClickDetector")
+			if cd then
+				cd.MaxActivationDistance = if enabled then 50 else 8
+			end
 		end
 		sparkles:GetPropertyChangedSignal("Enabled"):Connect(update)
 		update()

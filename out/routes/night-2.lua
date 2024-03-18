@@ -893,19 +893,19 @@ do
 	do
 		local _container_1 = Factory
 		local factory = window:section("Factory")
-		local alarm = factory:state("Alarm:")
-		local fuel = factory:state("Fuel:")
+		local radio = factory:state("Radio:")
+		local power = factory:state("Power:")
 		local money = factory:state("Money:"):setColor(Color3.new(0, 1, 0))
-		local function setAlarm(value)
-			alarm:setColor(if value then Color3.new(1, 0, 0) else Color3.new(1, 1, 1)):setValue(if value then "OFF" else "ON")
+		local function setRadio(value)
+			radio:setColor(if value then Color3.new(1, 0, 0) else Color3.new(1, 1, 1)):setValue(if value then "OFF" else "ON")
 		end
-		_container_1.setAlarm = setAlarm
-		local function setFuel(value)
-			local _fn = fuel
+		_container_1.setRadio = setRadio
+		local function setPower(value)
+			local _fn = power
 			local _arg0 = (value / 3) * 100
 			_fn:setValue(string.format("%.0f%%", _arg0))
 		end
-		_container_1.setFuel = setFuel
+		_container_1.setPower = setPower
 		local function setMoney(value)
 			local _fn = money
 			local _value = value
@@ -921,14 +921,14 @@ do
 		Stalker.setActive(false)
 		Stalker.setSeeking(false)
 		Stalker.setStunned(false)
-		Factory.setAlarm(AlarmsDown.Value)
-		Factory.setFuel(FuelValue.Value)
+		Factory.setRadio(AlarmsDown.Value)
+		Factory.setPower(FuelValue.Value)
 		Factory.setMoney(MoneyValue.Value)
 		AlarmsDown.Changed:Connect(function(value)
-			return Factory.setAlarm(value)
+			return Factory.setRadio(value)
 		end)
 		FuelValue.Changed:Connect(function(value)
-			return Factory.setFuel(value)
+			return Factory.setPower(value)
 		end)
 		MoneyValue.Changed:Connect(function(value)
 			return Factory.setMoney(value)
@@ -997,8 +997,12 @@ do
 			error("Sparkles not found!")
 		end
 		local update = function()
-			wire.LocalTransparencyModifier = if sparkles.Enabled then 0 else 1
-			return wire.LocalTransparencyModifier
+			local enabled = sparkles.Enabled
+			wire.LocalTransparencyModifier = if enabled then 0 else 1
+			local cd = wire:FindFirstChildWhichIsA("ClickDetector")
+			if cd then
+				cd.MaxActivationDistance = if enabled then 50 else 8
+			end
 		end
 		sparkles:GetPropertyChangedSignal("Enabled"):Connect(update)
 		update()

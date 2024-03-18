@@ -683,7 +683,12 @@ namespace FuseController {
 	const onWire = (wire: BasePart) => {
 		const sparkles = wire.WaitForChild("Sparkles", 5) as ParticleEmitter;
 		if (!sparkles) throw "Sparkles not found!";
-		const update = () => (wire.LocalTransparencyModifier = sparkles.Enabled ? 0 : 1);
+		const update = () => {
+			const enabled = sparkles.Enabled;
+			wire.LocalTransparencyModifier = enabled ? 0 : 1;
+			const cd = wire.FindFirstChildWhichIsA("ClickDetector");
+			if (cd) cd.MaxActivationDistance = enabled ? 50 : 8;
+		};
 		sparkles.GetPropertyChangedSignal("Enabled").Connect(update);
 		update();
 	};
